@@ -78,9 +78,6 @@ HELP_TEXT = """
 🔄 *مقارنة حسابين*
 قارن بين حسابين على نفس المنصة أو منصات مختلفة.
 
-👑 *اشتراك VIP*
-احصل على تحليلات أعمق وتقارير تفصيلية.
-
 ━━━━━━━━━━━━━━━━━━━━━━━
 
 📌 *ملاحظات:*
@@ -128,7 +125,6 @@ def get_main_keyboard():
             InlineKeyboardButton("🔄 مقارنة حسابين", callback_data="compare"),
         ],
         [
-            InlineKeyboardButton("👑 اشتراك VIP", callback_data="vip"),
             InlineKeyboardButton("📖 المساعدة", callback_data="help"),
         ],
     ]
@@ -218,14 +214,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_platform_keyboard("compare1"),
         )
         return WAITING_PLATFORM_COMPARE_1
-
-    elif data == "vip":
-        await query.edit_message_text(
-            VIP_TEXT,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(),
-        )
-        return MAIN_MENU
 
     elif data == "help":
         await query.edit_message_text(
