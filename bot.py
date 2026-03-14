@@ -838,21 +838,28 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
 
     url = update.message.text.strip()
 
-    # التحقق من صحة الرابط
-    url_pattern = re.compile(r'https?://(www\.)?(instagram\.com|tiktok\.com|youtube\.com|youtu\.be)/')
-    if not url_pattern.match(url):
+    # التحقق من صحة الرابط - يقبل جميع أنواع الروابط
+    url_lower = url.lower()
+    supported_domains = [
+        "instagram.com", "instagr.am",
+        "tiktok.com", "vm.tiktok.com", "vt.tiktok.com", "m.tiktok.com",
+        "youtube.com", "youtu.be", "m.youtube.com"
+    ]
+    is_valid = url_lower.startswith("http") and any(d in url_lower for d in supported_domains)
+    if not is_valid:
         await update.message.reply_text(
-            "⚠️ الرابط غير صحيح. يجب أن يكون رابط من Instagram أو TikTok أو YouTube.",
+            "⚠️ الرابط غير مدعوم. يجب أن يكون رابط من:\n"
+            "📸 Instagram\n🎵 TikTok (vm.tiktok.com مدعوم)\n🎥 YouTube",
             reply_markup=get_back_keyboard(),
         )
         return WAITING_DOWNLOAD_URL
 
     # تحديد المنصة
-    if "instagram.com" in url:
+    if "instagram.com" in url_lower or "instagr.am" in url_lower:
         platform_name = "Instagram 📸"
-    elif "tiktok.com" in url:
+    elif "tiktok.com" in url_lower:
         platform_name = "TikTok 🎵"
-    elif "youtube.com" in url or "youtu.be" in url:
+    elif "youtube.com" in url_lower or "youtu.be" in url_lower:
         platform_name = "YouTube 🎥"
     else:
         platform_name = "المنصة"
