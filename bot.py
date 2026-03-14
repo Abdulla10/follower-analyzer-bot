@@ -217,6 +217,15 @@ def get_analyze_again_keyboard(platform: str):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """أمر البدء"""
     user = update.effective_user
+    stats = load_stats()
+    # فحص وضع الصيانة
+    if stats.get("maintenance", False) and user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ البوت تحت الصيانة حالياً. يرجى المحاولة لاحقاً 🔧")
+        return MAIN_MENU
+    # فحص الحظر
+    if str(user.id) in stats.get("banned", []):
+        await update.message.reply_text("⛔️ لقد تم حظرك من استخدام هذا البوت.")
+        return MAIN_MENU
     register_user(user.id, user.username, user.full_name)
     context.user_data.clear()
     await update.message.reply_text(
@@ -262,6 +271,120 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 ━━━━━━━━━━━━━━━━━━━━━━━
 """
     await update.message.reply_text(report.strip(), parse_mode=ParseMode.MARKDOWN)
+
+
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """إرسال رسالة لجميع المستخدمين - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+    msg = " ".join(context.args) if context.args else ""
+    if not msg:
+        await update.message.reply_text("⚠️ اكتب الرسالة بعد الأمر:\n/broadcast نص الرسالة")
+        return
+    stats = load_stats()
+    success = 0
+    failed = 0
+    for uid in stats["users"]:
+        try:
+            await context.bot.send_message(chat_id=int(uid), text=f"📢 *رسالة من المطور:*\n\n{msg}", parse_mode=ParseMode.MARKDOWN)
+            success += 1
+        except:
+            failed += 1
+    await update.message.reply_text(f"✅ تم الإرسال لـ `{success}` مستخدم\n❌ فشل: `{failed}`", parse_mode=ParseMode.MARKDOWN)
+
+
+async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """حظر مستخدم - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+    if not context.args:
+        await update.message.reply_text("⚠️ اكتب: /ban USER_ID")
+        return
+    ban_id = context.args[0]
+    stats = load_stats()
+    if "banned" not in stats:
+        stats["banned"] = []
+    if ban_id not in stats["banned"]:
+        stats["banned"].append(ban_id)
+        save_stats(stats)
+        await update.message.reply_text(f"✅ تم حظر المستخدم `{ban_id}`", parse_mode=ParseMode.MARKDOWN)
+    else:
+        await update.message.reply_text("⚠️ هذا المستخدم محظور مسبقاً.")
+
+
+async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """رفع حظر مستخدم - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+    if not context.args:
+        await update.message.reply_text("⚠️ اكتب: /unban USER_ID")
+        return
+    unban_id = context.args[0]
+    stats = load_stats()
+    if "banned" in stats and unban_id in stats["banned"]:
+        stats["banned"].remove(unban_id)
+        save_stats(stats)
+        await update.message.reply_text(f"✅ تم رفع الحظر عن المستخدم `{unban_id}`", parse_mode=ParseMode.MARKDOWN)
+    else:
+        await update.message.reply_text("⚠️ هذا المستخدم ليس محظوراً.")
+
+
+async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """عرض قائمة المستخدمين - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+    stats = load_stats()
+    users_list = stats.get("users", {})
+    if not users_list:
+        await update.message.reply_text("لا يوجد مستخدمون بعد.")
+        return
+    text = f"👥 *قائمة المستخدمين ({len(users_list)})*\n━━━━━━━━━━━━━━━━━━━━━━━\n"
+    banned = stats.get("banned", [])
+    for uid, udata in list(users_list.items())[-20:]:
+        uname = f"@{udata['username']}" if udata.get('username') else udata.get('full_name', uid)
+        ban_icon = " 🚫" if uid in banned else ""
+        text += f"\n• {uname} | ID: `{uid}`{ban_icon}"
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def topusers_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """أكثر المستخدمين نشاطاً - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+    stats = load_stats()
+    users_list = stats.get("users", {})
+    sorted_users = sorted(users_list.items(), key=lambda x: x[1].get("analyses", 0) + x[1].get("comparisons", 0), reverse=True)[:10]
+    text = "🏆 *أكثر المستخدمين نشاطاً*\n━━━━━━━━━━━━━━━━━━━━━━━\n"
+    medals = ["🥇","🥈","🥉","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟"]
+    for i, (uid, udata) in enumerate(sorted_users):
+        uname = f"@{udata['username']}" if udata.get('username') else udata.get('full_name', uid)
+        total = udata.get('analyses', 0) + udata.get('comparisons', 0)
+        text += f"\n{medals[i]} {uname}: `{total}` عملية"
+    await update.message.reply_text(text, parse_mode=ParseMode.MARKDOWN)
+
+
+async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """تفعيل/تعطيل وضع الصيانة - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+    stats = load_stats()
+    current = stats.get("maintenance", False)
+    stats["maintenance"] = not current
+    save_stats(stats)
+    status = "🔴 مفعّل" if stats["maintenance"] else "🟢 معطّل"
+    await update.message.reply_text(f"⚙️ وضع الصيانة: {status}")
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -750,6 +873,12 @@ def main():
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("stats", stats_command))
+    app.add_handler(CommandHandler("broadcast", broadcast_command))
+    app.add_handler(CommandHandler("ban", ban_command))
+    app.add_handler(CommandHandler("unban", unban_command))
+    app.add_handler(CommandHandler("users", users_command))
+    app.add_handler(CommandHandler("topusers", topusers_command))
+    app.add_handler(CommandHandler("maintenance", maintenance_command))
     app.add_error_handler(error_handler)
 
     print("🤖 Follower Analyzer Bot يعمل الآن...")
