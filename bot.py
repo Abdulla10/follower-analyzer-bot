@@ -871,17 +871,27 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             ydl_opts = {
-                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-                'outtmpl': f'{tmpdir}/%(title)s.%(ext)s',
+                'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
+                'outtmpl': f'{tmpdir}/video.%(ext)s',
                 'quiet': True,
                 'no_warnings': True,
                 'merge_output_format': 'mp4',
-                'max_filesize': 50 * 1024 * 1024,  # 50MB
+                'noplaylist': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                },
+                'extractor_args': {
+                    'youtube': {'skip': ['dash', 'hls']},
+                },
+                'socket_timeout': 30,
+                'retries': 3,
             }
 
-            # إضافة خيارات خاصة لكل منصة
-            if "tiktok.com" in url:
+            # خيارات خاصة لكل منصة
+            if "tiktok.com" in url_lower:
                 ydl_opts['format'] = 'bestvideo+bestaudio/best'
+            elif "instagram.com" in url_lower:
+                ydl_opts['format'] = 'best'
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -948,13 +958,22 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
                 await loading_msg.delete()
 
     except yt_dlp.utils.DownloadError as e:
-        err_msg = str(e)
-        if "Private" in err_msg or "private" in err_msg:
-            error_text = "⛔️ المحتوى خاص أو غير متاح."
-        elif "not available" in err_msg:
+        err_msg = str(e).lower()
+        if "private" in err_msg or "login" in err_msg or "sign in" in err_msg:
+            error_text = "⛔️ المحتوى خاص أو يتطلب تسجيل دخول."
+        elif "not available" in err_msg or "unavailable" in err_msg:
             error_text = "⚠️ المحتوى غير متاح في منطقتك."
+        elif "age" in err_msg:
+            error_text = "⚠️ المحتوى مقيد بالسن."
+        elif "copyright" in err_msg:
+            error_text = "⚠️ المحتوى محمي بحقوق النشر."
         else:
-            error_text = "❌ تعذر تحميل المحتوى. تأكد من صحة الرابط وأن المحتوى عام."
+            error_text = (
+                "❌ تعذر تحميل المحتوى.\n\n"
+                "تأكد من:\n"
+                "• الرابط صحيح\n"
+                "• المحتوى عام وليس خاصاً"
+            )
         await loading_msg.edit_text(error_text, reply_markup=get_back_keyboard())
     except Exception as e:
         logger.error(f"خطأ في التحميل: {e}")
