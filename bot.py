@@ -1030,6 +1030,29 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
     return WAITING_DOWNLOAD_URL
 
 
+# ===================== معالج back_main المستقل =====================
+
+async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """معالج مستقل لزر القائمة الرئيسية - يعمل من أي رسالة"""
+    query = update.callback_query
+    await query.answer()
+    context.user_data.clear()
+    try:
+        await query.edit_message_text(
+            WELCOME_TEXT,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_main_keyboard(),
+        )
+    except Exception:
+        # إذا فشل التعديل (مثلاً رسالة فيديو)، أرسل رسالة جديدة
+        await query.message.reply_text(
+            WELCOME_TEXT,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_main_keyboard(),
+        )
+    return MAIN_MENU
+
+
 # ===================== معالج الرسائل غير المعروفة =====================
 
 async def unknown_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1098,6 +1121,8 @@ def main():
     )
 
     app.add_handler(conv_handler)
+    # معالج مستقل لزر القائمة الرئيسية (يعمل من أي رسالة خارج الـ ConversationHandler)
+    app.add_handler(CallbackQueryHandler(back_to_main_handler, pattern="^back_main$"))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
