@@ -6,6 +6,8 @@ Follower Analyzer Bot - البوت الرئيسي
 import logging
 import os
 import asyncio
+import json
+from datetime import datetime
 from typing import Optional
 
 from telegram import (
@@ -31,6 +33,58 @@ from analyzer import analyze_account, format_number
 # ===================== الإعدادات =====================
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+
+# ===================== نظام الإحصائيات =====================
+
+STATS_FILE = "stats.json"
+
+def load_stats() -> dict:
+    """تحميل الإحصائيات من الملف"""
+    if os.path.exists(STATS_FILE):
+        try:
+            with open(STATS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return {"users": {}, "total_analyses": 0, "total_comparisons": 0}
+
+def save_stats(stats: dict):
+    """حفظ الإحصائيات في الملف"""
+    with open(STATS_FILE, "w", encoding="utf-8") as f:
+        json.dump(stats, f, ensure_ascii=False, indent=2)
+
+def register_user(user_id: int, username: str, full_name: str):
+    """تسجيل مستخدم جديد أو تحديث بياناته"""
+    stats = load_stats()
+    uid = str(user_id)
+    if uid not in stats["users"]:
+        stats["users"][uid] = {
+            "username": username or "",
+            "full_name": full_name or "",
+            "joined": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "analyses": 0,
+            "comparisons": 0,
+        }
+    save_stats(stats)
+
+def increment_analysis(user_id: int):
+    """زيادة عداد التحليلات"""
+    stats = load_stats()
+    uid = str(user_id)
+    if uid in stats["users"]:
+        stats["users"][uid]["analyses"] = stats["users"][uid].get("analyses", 0) + 1
+    stats["total_analyses"] = stats.get("total_analyses", 0) + 1
+    save_stats(stats)
+
+def increment_comparison(user_id: int):
+    """زيادة عداد المقارنات"""
+    stats = load_stats()
+    uid = str(user_id)
+    if uid in stats["users"]:
+        stats["users"][uid]["comparisons"] = stats["users"][uid].get("comparisons", 0) + 1
+    stats["total_comparisons"] = stats.get("total_comparisons", 0) + 1
+    save_stats(stats)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -162,6 +216,8 @@ def get_analyze_again_keyboard(platform: str):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """أمر البدء"""
+    user = update.effective_user
+    register_user(user.id, user.username, user.full_name)
     context.user_data.clear()
     await update.message.reply_text(
         WELCOME_TEXT,
@@ -169,6 +225,43 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         reply_markup=get_main_keyboard(),
     )
     return MAIN_MENU
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """أمر الإحصائيات - للمالك فقط"""
+    user = update.effective_user
+    if ADMIN_ID == 0 or user.id != ADMIN_ID:
+        await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
+        return
+
+    stats = load_stats()
+    total_users = len(stats["users"])
+    total_analyses = stats.get("total_analyses", 0)
+    total_comparisons = stats.get("total_comparisons", 0)
+
+    # آخر 10 مستخدمين
+    recent_users = list(stats["users"].items())[-10:]
+    recent_text = ""
+    for uid, udata in reversed(recent_users):
+        uname = f"@{udata['username']}" if udata.get('username') else udata.get('full_name', uid)
+        joined = udata.get('joined', '')
+        analyses = udata.get('analyses', 0)
+        recent_text += f"\n• {uname} | تحليلات: {analyses} | {joined}"
+
+    report = f"""
+📊 *إحصائيات البوت*
+━━━━━━━━━━━━━━━━━━━━━━━
+
+👥 إجمالي المستخدمين: `{total_users}`
+🔍 إجمالي التحليلات: `{total_analyses}`
+🔄 إجمالي المقارنات: `{total_comparisons}`
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🕒 *آخر المستخدمين:*
+{recent_text if recent_text else 'لا يوجد مستخدمون بعد'}
+━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    await update.message.reply_text(report.strip(), parse_mode=ParseMode.MARKDOWN)
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -285,6 +378,7 @@ async def receive_username_analyze(update: Update, context: ContextTypes.DEFAULT
     try:
         # تحليل الحساب
         result = analyze_account(username, platform)
+        increment_analysis(update.effective_user.id)
 
         # تحديث رسالة الانتظار
         await loading_msg.edit_text(
@@ -325,9 +419,9 @@ async def receive_username_compare_1(update: Update, context: ContextTypes.DEFAU
         await update.message.reply_text("⚠️ اسم مستخدم غير صحيح. أعد المحاولة.")
         return WAITING_USERNAME_COMPARE_1
 
-    context.user_data["compare_username_1"] = username
-    platform_1 = context.user_data.get("compare_platform_1", "instagram")
-
+    context.user_data["compare_username_2"] = username2
+    increment_comparison(update.effective_user.id)
+    platform_2 = context.user_data.get("compare_platform_2", "instagram")
     await update.message.reply_text(
         f"✅ تم حفظ الحساب الأول: @{username} ({platform_1.capitalize()})\n\n"
         "اختر منصة الحساب الثاني:",
@@ -655,6 +749,7 @@ def main():
 
     app.add_handler(conv_handler)
     app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CommandHandler("stats", stats_command))
     app.add_error_handler(error_handler)
 
     print("🤖 Follower Analyzer Bot يعمل الآن...")
