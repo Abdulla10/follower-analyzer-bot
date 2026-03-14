@@ -7,6 +7,9 @@ import logging
 import os
 import asyncio
 import json
+import tempfile
+import glob
+import requests
 from datetime import datetime
 from typing import Optional
 
@@ -134,41 +137,18 @@ HELP_TEXT = """
 🔄 *مقارنة حسابين*
 قارن بين حسابين على نفس المنصة أو منصات مختلفة.
 
+⬇️ *تحميل محتوى*
+أرسل رابط الفيديو أو المنشور من Instagram أو TikTok أو YouTube وسيتم تحميله وإرساله لك مباشرة.
+
 ━━━━━━━━━━━━━━━━━━━━━━━
 
 📌 *ملاحظات:*
 • يعمل البوت مع الحسابات العامة فقط
 • التحليل يشمل آخر 12 منشور
 • معدل التفاعل = (متوسط الإعجابات + متوسط التعليقات) ÷ عدد المتابعين × 100
+• حد حجم الفيديو للتحميل: 50MB
 
 ━━━━━━━━━━━━━━━━━━━━━━━
-"""
-
-VIP_TEXT = """
-👑 *اشتراك VIP - Follower Analyzer Bot*
-
-━━━━━━━━━━━━━━━━━━━━━━━
-
-🆓 *الخطة المجانية (الحالية):*
-✅ تحليل الحسابات العامة
-✅ تقرير أساسي للتفاعل
-✅ تحليل المتابعين
-✅ مقارنة حسابين
-
-━━━━━━━━━━━━━━━━━━━━━━━
-
-💎 *خطة VIP:*
-✅ كل مميزات الخطة المجانية
-✅ تحليل أعمق لآخر 50 منشور
-✅ تتبع نمو الحساب أسبوعياً
-✅ تقرير PDF مفصّل
-✅ مقارنة حتى 5 حسابات
-✅ تنبيهات تلقائية للتغييرات
-✅ أولوية في الدعم الفني
-
-💰 *السعر: 9.99$ / شهر*
-
-📩 للاشتراك تواصل مع: @YourSupportUsername
 """
 
 
@@ -448,10 +428,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         download_text = (
             "⬇️ *تحميل محتوى بجودة عالية*\n\n"
             "أرسل رابط الفيديو أو المنشور من أي من هذه المنصات:\n\n"
-            "📸 *Instagram* - صور وفيديو وReels\n"
-            "🎵 *TikTok* - فيديوهات بدون واترمارك\n"
-            "🎥 *YouTube* - فيديوهات وShorts\n\n"
-            "💡 الصق الرابط وسيتم التحميل فوراً!"
+            "📸 *Instagram* — صور وفيديو وReels\n"
+            "🎵 *TikTok* — فيديوهات بدون واترمارك\n"
+            "🎥 *YouTube* — فيديوهات وShorts\n\n"
+            "💡 الصق الرابط وسيتم التحميل فوراً!\n\n"
+            "_ملاحظة: الحد الأقصى للحجم 50MB_"
         )
         await query.edit_message_text(
             download_text,
@@ -563,9 +544,8 @@ async def receive_username_compare_1(update: Update, context: ContextTypes.DEFAU
         await update.message.reply_text("⚠️ اسم مستخدم غير صحيح. أعد المحاولة.")
         return WAITING_USERNAME_COMPARE_1
 
-    context.user_data["compare_username_2"] = username2
-    increment_comparison(update.effective_user.id)
-    platform_2 = context.user_data.get("compare_platform_2", "instagram")
+    context.user_data["compare_username_1"] = username
+    platform_1 = context.user_data.get("compare_platform_1", "instagram")
     await update.message.reply_text(
         f"✅ تم حفظ الحساب الأول: @{username} ({platform_1.capitalize()})\n\n"
         "اختر منصة الحساب الثاني:",
@@ -617,6 +597,7 @@ async def receive_username_compare_2(update: Update, context: ContextTypes.DEFAU
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_back_keyboard(),
         )
+        increment_comparison(update.effective_user.id)
 
     except Exception as e:
         logger.error(f"خطأ في المقارنة: {e}")
@@ -830,15 +811,101 @@ def _build_progress_bar(value: float, max_value: float, length: int = 10) -> str
 
 # ===================== تحميل المحتوى =====================
 
-async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """استقبال رابط التحميل"""
+def download_tiktok(url: str) -> dict:
+    """تحميل فيديو TikTok باستخدام tikwm.com API"""
+    try:
+        r = requests.post(
+            "https://tikwm.com/api/",
+            data={"url": url, "hd": "1"},
+            timeout=30,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        data = r.json()
+        if data.get("code") == 0:
+            video_data = data.get("data", {})
+            # تفضيل HD إذا كان متاحاً
+            video_url = video_data.get("hdplay") or video_data.get("play")
+            title = video_data.get("title", "TikTok Video")
+            duration = video_data.get("duration", 0)
+            return {
+                "success": True,
+                "url": video_url,
+                "title": title,
+                "duration": duration,
+                "platform": "TikTok 🎵",
+            }
+        else:
+            return {"success": False, "error": data.get("msg", "فشل التحميل")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def download_with_ytdlp(url: str, platform: str) -> dict:
+    """تحميل فيديو باستخدام yt-dlp (Instagram وYouTube)"""
     import yt_dlp
-    import tempfile
-    import re
+
+    tmpdir = tempfile.mkdtemp()
+    try:
+        ydl_opts = {
+            "format": "best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best",
+            "outtmpl": f"{tmpdir}/video.%(ext)s",
+            "quiet": True,
+            "no_warnings": True,
+            "merge_output_format": "mp4",
+            "noplaylist": True,
+            "socket_timeout": 30,
+            "retries": 3,
+            "http_headers": {
+                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            },
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            title = info.get("title", "Video")[:50]
+            duration = info.get("duration", 0) or 0
+
+            files = glob.glob(f"{tmpdir}/*")
+            if not files:
+                return {"success": False, "error": "لم يتم إيجاد الملف المحمل", "tmpdir": tmpdir}
+
+            file_path = files[0]
+            file_size = os.path.getsize(file_path)
+
+            return {
+                "success": True,
+                "file_path": file_path,
+                "title": title,
+                "duration": duration,
+                "file_size": file_size,
+                "platform": platform,
+                "tmpdir": tmpdir,
+            }
+    except yt_dlp.utils.DownloadError as e:
+        import shutil
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        err_msg = str(e).lower()
+        if "private" in err_msg or "login" in err_msg or "sign in" in err_msg:
+            return {"success": False, "error": "المحتوى خاص أو يتطلب تسجيل دخول"}
+        elif "not available" in err_msg or "unavailable" in err_msg:
+            return {"success": False, "error": "المحتوى غير متاح"}
+        elif "age" in err_msg:
+            return {"success": False, "error": "المحتوى مقيد بالسن"}
+        else:
+            return {"success": False, "error": "تعذر تحميل المحتوى - تأكد من صحة الرابط"}
+    except Exception as e:
+        import shutil
+        shutil.rmtree(tmpdir, ignore_errors=True)
+        return {"success": False, "error": str(e)[:100]}
+
+
+async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """استقبال رابط التحميل ومعالجته"""
+    import shutil
 
     url = update.message.text.strip()
 
-    # التحقق من صحة الرابط - يقبل جميع أنواع الروابط
+    # التحقق من صحة الرابط
     url_lower = url.lower()
     supported_domains = [
         "instagram.com", "instagr.am",
@@ -848,91 +915,97 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
     is_valid = url_lower.startswith("http") and any(d in url_lower for d in supported_domains)
     if not is_valid:
         await update.message.reply_text(
-            "⚠️ الرابط غير مدعوم. يجب أن يكون رابط من:\n"
-            "📸 Instagram\n🎵 TikTok (vm.tiktok.com مدعوم)\n🎥 YouTube",
+            "⚠️ *الرابط غير مدعوم*\n\n"
+            "يجب أن يكون رابطاً من:\n"
+            "📸 Instagram (instagram.com)\n"
+            "🎵 TikTok (tiktok.com أو vm.tiktok.com)\n"
+            "🎥 YouTube (youtube.com أو youtu.be)\n\n"
+            "مثال: `https://vm.tiktok.com/xxxxx`",
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=get_back_keyboard(),
         )
         return WAITING_DOWNLOAD_URL
 
     # تحديد المنصة
-    if "instagram.com" in url_lower or "instagr.am" in url_lower:
-        platform_name = "Instagram 📸"
-    elif "tiktok.com" in url_lower:
+    is_tiktok = "tiktok.com" in url_lower
+    is_instagram = "instagram.com" in url_lower or "instagr.am" in url_lower
+    is_youtube = "youtube.com" in url_lower or "youtu.be" in url_lower
+
+    if is_tiktok:
         platform_name = "TikTok 🎵"
-    elif "youtube.com" in url_lower or "youtu.be" in url_lower:
-        platform_name = "YouTube 🎥"
+    elif is_instagram:
+        platform_name = "Instagram 📸"
     else:
-        platform_name = "المنصة"
+        platform_name = "YouTube 🎥"
 
     loading_msg = await update.message.reply_text(
-        f"⏳ جاري تحميل المحتوى من {platform_name}...\nرجاءً الانتظار بضع ثوان ⏳"
+        f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
+        "🔄 يرجى الانتظار..."
     )
 
     try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            ydl_opts = {
-                'format': 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best',
-                'outtmpl': f'{tmpdir}/video.%(ext)s',
-                'quiet': True,
-                'no_warnings': True,
-                'merge_output_format': 'mp4',
-                'noplaylist': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                },
-                'extractor_args': {
-                    'youtube': {'skip': ['dash', 'hls']},
-                },
-                'socket_timeout': 30,
-                'retries': 3,
-            }
+        result = None
+        tmpdir_to_clean = None
 
-            # خيارات خاصة لكل منصة
-            if "tiktok.com" in url_lower:
-                ydl_opts['format'] = 'bestvideo+bestaudio/best'
-            elif "instagram.com" in url_lower:
-                ydl_opts['format'] = 'best'
+        if is_tiktok:
+            # استخدام tikwm API لـ TikTok
+            await loading_msg.edit_text(
+                f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
+                "🔄 جلب رابط الفيديو..."
+            )
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, download_tiktok, url
+            )
 
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=True)
-                title = info.get('title', 'محتوى')[:50]
-                duration = info.get('duration', 0)
-
-                # البحث عن الملف المحمل
-                import glob
-                files = glob.glob(f'{tmpdir}/*')
-                if not files:
-                    raise Exception("لم يتم إيجاد الملف المحمل")
-
-                file_path = files[0]
-                file_size = os.path.getsize(file_path)
-
-                # التحقق من حجم الملف (50MB حد تيليغرام)
-                if file_size > 50 * 1024 * 1024:
-                    await loading_msg.edit_text(
-                        "⚠️ حجم الفيديو كبير جداً (\u0623كثر من 50MB).\n"
-                        "تيليغرام يسمح بحد 50MB فقط.\n"
-                        "جرب فيديو أقصر.",
-                        reply_markup=get_back_keyboard(),
-                    )
-                    return WAITING_DOWNLOAD_URL
+            if result["success"]:
+                video_url = result["url"]
+                title = result.get("title", "TikTok Video")
+                duration = result.get("duration", 0)
 
                 await loading_msg.edit_text(
-                    f"✅ تم التحميل! جاري الإرسال..."
+                    f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
+                    "📥 تحميل الفيديو..."
                 )
 
-                # إرسال الملف
-                ext = os.path.splitext(file_path)[1].lower()
-                caption = (
-                    f"⬇️ *{title}*\n"
-                    f"📱 المنصة: {platform_name}\n"
-                    f"💾 الحجم: {file_size // (1024*1024):.1f} MB\n"
-                    f"⏱ المدة: {duration // 60}:{duration % 60:02d} دقيقة\n\n"
-                    f"_Follower Analyzer Bot_ 🤖"
+                # تحميل الفيديو من الرابط المباشر
+                video_response = requests.get(
+                    video_url,
+                    timeout=60,
+                    stream=True,
+                    headers={"User-Agent": "Mozilla/5.0", "Referer": "https://www.tiktok.com/"}
                 )
 
-                with open(file_path, 'rb') as f:
-                    if ext in ['.mp4', '.mkv', '.webm', '.mov']:
+                if video_response.status_code == 200:
+                    # حفظ مؤقت
+                    tmpdir_to_clean = tempfile.mkdtemp()
+                    file_path = os.path.join(tmpdir_to_clean, "tiktok_video.mp4")
+                    with open(file_path, "wb") as f:
+                        for chunk in video_response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+
+                    file_size = os.path.getsize(file_path)
+
+                    if file_size > 50 * 1024 * 1024:
+                        await loading_msg.edit_text(
+                            "⚠️ حجم الفيديو كبير جداً (أكثر من 50MB).\n"
+                            "تيليغرام يسمح بحد 50MB فقط.\n"
+                            "جرب فيديو أقصر.",
+                            reply_markup=get_back_keyboard(),
+                        )
+                        shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
+                        return WAITING_DOWNLOAD_URL
+
+                    await loading_msg.edit_text("✅ تم التحميل! جاري الإرسال...")
+
+                    caption = (
+                        f"⬇️ *{title[:100]}*\n"
+                        f"📱 المنصة: {platform_name}\n"
+                        f"💾 الحجم: {file_size / (1024*1024):.1f} MB\n"
+                        f"⏱ المدة: {duration // 60}:{duration % 60:02d}\n\n"
+                        f"_Follower Analyzer Bot_ 🤖"
+                    )
+
+                    with open(file_path, "rb") as f:
                         await update.message.reply_video(
                             video=f,
                             caption=caption,
@@ -940,7 +1013,70 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
                             supports_streaming=True,
                             reply_markup=get_back_keyboard(),
                         )
-                    elif ext in ['.jpg', '.jpeg', '.png', '.webp']:
+
+                    await loading_msg.delete()
+                    shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
+                else:
+                    await loading_msg.edit_text(
+                        "❌ فشل تحميل الفيديو. حاول مرة أخرى.",
+                        reply_markup=get_back_keyboard(),
+                    )
+            else:
+                await loading_msg.edit_text(
+                    f"❌ تعذر التحميل من TikTok\n\n{result.get('error', 'خطأ غير معروف')}",
+                    reply_markup=get_back_keyboard(),
+                )
+
+        else:
+            # استخدام yt-dlp لـ Instagram وYouTube
+            await loading_msg.edit_text(
+                f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
+                "🔄 جلب البيانات وتحميل الفيديو..."
+            )
+
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, download_with_ytdlp, url, platform_name
+            )
+
+            if result["success"]:
+                file_path = result["file_path"]
+                file_size = result["file_size"]
+                title = result.get("title", "Video")
+                duration = result.get("duration", 0) or 0
+                tmpdir_to_clean = result.get("tmpdir")
+
+                if file_size > 50 * 1024 * 1024:
+                    await loading_msg.edit_text(
+                        "⚠️ حجم الفيديو كبير جداً (أكثر من 50MB).\n"
+                        "تيليغرام يسمح بحد 50MB فقط.\n"
+                        "جرب فيديو أقصر أو بجودة أقل.",
+                        reply_markup=get_back_keyboard(),
+                    )
+                    if tmpdir_to_clean:
+                        shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
+                    return WAITING_DOWNLOAD_URL
+
+                await loading_msg.edit_text("✅ تم التحميل! جاري الإرسال...")
+
+                ext = os.path.splitext(file_path)[1].lower()
+                caption = (
+                    f"⬇️ *{title[:100]}*\n"
+                    f"📱 المنصة: {platform_name}\n"
+                    f"💾 الحجم: {file_size / (1024*1024):.1f} MB\n"
+                    f"⏱ المدة: {duration // 60}:{duration % 60:02d}\n\n"
+                    f"_Follower Analyzer Bot_ 🤖"
+                )
+
+                with open(file_path, "rb") as f:
+                    if ext in [".mp4", ".mkv", ".webm", ".mov"]:
+                        await update.message.reply_video(
+                            video=f,
+                            caption=caption,
+                            parse_mode=ParseMode.MARKDOWN,
+                            supports_streaming=True,
+                            reply_markup=get_back_keyboard(),
+                        )
+                    elif ext in [".jpg", ".jpeg", ".png", ".webp"]:
                         await update.message.reply_photo(
                             photo=f,
                             caption=caption,
@@ -956,31 +1092,29 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
                         )
 
                 await loading_msg.delete()
+                if tmpdir_to_clean:
+                    shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
+            else:
+                error_msg = result.get("error", "خطأ غير معروف")
+                await loading_msg.edit_text(
+                    f"❌ *تعذر التحميل*\n\n"
+                    f"{error_msg}\n\n"
+                    "تأكد من:\n"
+                    "• صحة الرابط\n"
+                    "• أن المحتوى عام وليس خاصاً",
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=get_back_keyboard(),
+                )
 
-    except yt_dlp.utils.DownloadError as e:
-        err_msg = str(e).lower()
-        if "private" in err_msg or "login" in err_msg or "sign in" in err_msg:
-            error_text = "⛔️ المحتوى خاص أو يتطلب تسجيل دخول."
-        elif "not available" in err_msg or "unavailable" in err_msg:
-            error_text = "⚠️ المحتوى غير متاح في منطقتك."
-        elif "age" in err_msg:
-            error_text = "⚠️ المحتوى مقيد بالسن."
-        elif "copyright" in err_msg:
-            error_text = "⚠️ المحتوى محمي بحقوق النشر."
-        else:
-            error_text = (
-                "❌ تعذر تحميل المحتوى.\n\n"
-                "تأكد من:\n"
-                "• الرابط صحيح\n"
-                "• المحتوى عام وليس خاصاً"
-            )
-        await loading_msg.edit_text(error_text, reply_markup=get_back_keyboard())
     except Exception as e:
-        logger.error(f"خطأ في التحميل: {e}")
-        await loading_msg.edit_text(
-            "❌ حدث خطأ أثناء التحميل. حاول مرة أخرى.",
-            reply_markup=get_back_keyboard(),
-        )
+        logger.error(f"خطأ غير متوقع في التحميل: {e}")
+        try:
+            await loading_msg.edit_text(
+                "❌ حدث خطأ غير متوقع. حاول مرة أخرى.",
+                reply_markup=get_back_keyboard(),
+            )
+        except:
+            pass
 
     return WAITING_DOWNLOAD_URL
 
