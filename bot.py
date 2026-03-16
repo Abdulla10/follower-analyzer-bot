@@ -1446,6 +1446,71 @@ _Follower Analyzer Bot_ 🤖
 
 # ===================== TikTok Info =====================
 
+def guess_tiktok_country(bio: str, bio_link: str, nickname: str, lang_ui: str) -> str:
+    """استنتاج الدولة من البايو والرابط والاسم"""
+    import re
+    text = f"{bio} {bio_link} {nickname}".lower()
+
+    # كشف اللغة العربية
+    arabic_chars = len(re.findall(r'[\u0600-\u06FF]', bio + nickname))
+    is_arabic = arabic_chars > 3
+
+    # كلمات دالة على دول محددة
+    country_hints = [
+        # السعودية
+        (['سعودي', 'سعودية', 'saudi', 'ksa', 'السعودية', 'الرياض', 'riyadh', 'jeddah', 'جدة', 'مكة', 'mecca'], 'SA', 'المملكة العربية السعودية 🇸🇦', 'Saudi Arabia 🇸🇦'),
+        # الإمارات
+        (['إمارات', 'امارات', 'uae', 'dubai', 'دبي', 'abu dhabi', 'ابوظبي', 'شارجة', 'sharjah'], 'AE', 'الإمارات 🇦🇪', 'UAE 🇦🇪'),
+        # الكويت
+        (['كويت', 'kuwait', 'q8'], 'KW', 'الكويت 🇰🇼', 'Kuwait 🇰🇼'),
+        # قطر
+        (['قطر', 'qatar', 'الدوحة', 'doha'], 'QA', 'قطر 🇶🇦', 'Qatar 🇶🇦'),
+        # البحرين
+        (['بحرين', 'bahrain', 'bh'], 'BH', 'البحرين 🇧🇭', 'Bahrain 🇧🇭'),
+        # عمان
+        (['عمان', 'oman', 'مسقط', 'muscat'], 'OM', 'عُمان 🇴🇲', 'Oman 🇴🇲'),
+        # مصر
+        (['مصر', 'egypt', 'القاهرة', 'cairo', 'اسكندرية', 'alexandria'], 'EG', 'مصر 🇪🇬', 'Egypt 🇪🇬'),
+        # الأردن
+        (['اردن', 'أردن', 'jordan', 'عمان', 'amman'], 'JO', 'الأردن 🇯🇴', 'Jordan 🇯🇴'),
+        # العراق
+        (['عراق', 'iraq', 'بغداد', 'baghdad', 'بصرة', 'basra'], 'IQ', 'العراق 🇮🇶', 'Iraq 🇮🇶'),
+        # سوريا
+        (['سوريا', 'syria', 'دمشق', 'damascus', 'حلب', 'aleppo'], 'SY', 'سوريا 🇸🇾', 'Syria 🇸🇾'),
+        # لبنان
+        (['لبنان', 'lebanon', 'بيروت', 'beirut'], 'LB', 'لبنان 🇱🇧', 'Lebanon 🇱🇧'),
+        # المغرب
+        (['مغرب', 'morocco', 'الرباط', 'rabat', 'الدار البيضاء', 'casablanca'], 'MA', 'المغرب 🇲🇦', 'Morocco 🇲🇦'),
+        # تونس
+        (['تونس', 'tunisia', 'تونس العاصمة'], 'TN', 'تونس 🇹🇳', 'Tunisia 🇹🇳'),
+        # الجزائر
+        (['جزائر', 'algeria', 'الجزائر العاصمة'], 'DZ', 'الجزائر 🇩🇿', 'Algeria 🇩🇿'),
+        # اليمن
+        (['يمن', 'yemen', 'صنعاء', 'sanaa'], 'YE', 'اليمن 🇾🇪', 'Yemen 🇾🇪'),
+        # الولايات المتحدة
+        (['usa', 'united states', 'america', 'new york', 'los angeles', 'california', 'texas', 'florida'], 'US', 'الولايات المتحدة 🇺🇸', 'United States 🇺🇸'),
+        # المملكة المتحدة
+        (['uk', 'united kingdom', 'england', 'london', 'britain', 'manchester'], 'GB', 'المملكة المتحدة 🇬🇧', 'United Kingdom 🇬🇧'),
+        # تركيا
+        (['تركيا', 'turkey', 'istanbul', 'اسطنبول', 'ankara'], 'TR', 'تركيا 🇹🇷', 'Turkey 🇹🇷'),
+        # باكستان
+        (['pakistan', 'pk', 'karachi', 'lahore', 'islamabad'], 'PK', 'باكستان 🇵🇰', 'Pakistan 🇵🇰'),
+        # الهند
+        (['india', 'hindi', 'mumbai', 'delhi', 'bangalore'], 'IN', 'الهند 🇮🇳', 'India 🇮🇳'),
+    ]
+
+    for keywords, code, name_ar, name_en in country_hints:
+        for kw in keywords:
+            if kw in text:
+                return name_ar if lang_ui == 'ar' else name_en
+
+    # إذا البايو عربي بدون تحديد دولة
+    if is_arabic:
+        return 'دولة عربية 🇸🇦🇦🇪' if lang_ui == 'ar' else 'Arab Country 🇸🇦'
+
+    return 'غير محدد ⚠️' if lang_ui == 'ar' else 'Unknown ⚠️'
+
+
 def fetch_tiktok_user_info(username: str) -> dict:
     """جلب معلومات مستخدم TikTok من tikwm API"""
     try:
@@ -1514,6 +1579,9 @@ def build_tiktok_info_report(info: dict, context) -> str:
             return "🌎 Everyone" if lang == "en" else "🌎 الجميع"
         return mapping.get(val, str(val))
 
+    # استنتاج الدولة
+    country_guess = guess_tiktok_country(bio, bio_link, nickname, lang)
+
     if lang == "ar":
         report = f"""
 🎵 *معلومات حساب TikTok*
@@ -1524,6 +1592,7 @@ def build_tiktok_info_report(info: dict, context) -> str:
 👤 اليوزر: `@{unique_id}`
 🏷️ الاسم المعروض: `{nickname}`
 📝 البايو: {bio if bio else '—'}
+🌍 الدولة: {country_guess}
 📅 تاريخ الإنشاء: `{create_date} UTC`
 ✅ موثّق: {yes_no(verified, lang)}
 
@@ -1554,6 +1623,7 @@ def build_tiktok_info_report(info: dict, context) -> str:
 👤 Username: `@{unique_id}`
 🏷️ Nickname: `{nickname}`
 📝 Bio: {bio if bio else '—'}
+🌍 Country: {country_guess}
 📅 Created: `{create_date} UTC`
 ✅ Verified: {yes_no(verified, lang)}
 
