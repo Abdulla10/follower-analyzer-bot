@@ -43,7 +43,6 @@ ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 STATS_FILE = "stats.json"
 
 def load_stats() -> dict:
-    """تحميل الإحصائيات من الملف"""
     if os.path.exists(STATS_FILE):
         try:
             with open(STATS_FILE, "r", encoding="utf-8") as f:
@@ -53,12 +52,10 @@ def load_stats() -> dict:
     return {"users": {}, "total_analyses": 0, "total_comparisons": 0}
 
 def save_stats(stats: dict):
-    """حفظ الإحصائيات في الملف"""
     with open(STATS_FILE, "w", encoding="utf-8") as f:
         json.dump(stats, f, ensure_ascii=False, indent=2)
 
 def register_user(user_id: int, username: str, full_name: str):
-    """تسجيل مستخدم جديد أو تحديث بياناته"""
     stats = load_stats()
     uid = str(user_id)
     if uid not in stats["users"]:
@@ -68,11 +65,15 @@ def register_user(user_id: int, username: str, full_name: str):
             "joined": datetime.now().strftime("%Y-%m-%d %H:%M"),
             "analyses": 0,
             "comparisons": 0,
+            "lang": "ar",
         }
     save_stats(stats)
 
+def get_user_lang(context: ContextTypes.DEFAULT_TYPE) -> str:
+    """الحصول على لغة المستخدم من user_data"""
+    return context.user_data.get("lang", "ar")
+
 def increment_analysis(user_id: int):
-    """زيادة عداد التحليلات"""
     stats = load_stats()
     uid = str(user_id)
     if uid in stats["users"]:
@@ -81,7 +82,6 @@ def increment_analysis(user_id: int):
     save_stats(stats)
 
 def increment_comparison(user_id: int):
-    """زيادة عداد المقارنات"""
     stats = load_stats()
     uid = str(user_id)
     if uid in stats["users"]:
@@ -108,91 +108,302 @@ logger = logging.getLogger(__name__)
 ) = range(8)
 
 
-# ===================== النصوص والرسائل =====================
+# ===================== النصوص ثنائية اللغة =====================
 
-WELCOME_TEXT = """
-🔍 *مرحباً بك في Follower Analyzer Bot!*
+TEXTS = {
+    "ar": {
+        "welcome": (
+            "🔍 *مرحباً بك في Follower Analyzer Bot!*\n\n"
+            "أنا بوت متخصص في تحليل حسابات السوشيال ميديا، أساعدك على:\n\n"
+            "📊 معرفة *جودة المتابعين* ونسبتهم الحقيقية\n"
+            "💬 حساب *معدل التفاعل* الدقيق\n"
+            "📈 تحليل *نمو الحساب* وطبيعته\n"
+            "⭐ *تقييم شامل* للحساب\n"
+            "⬇️ *تحميل فيديوهات TikTok* بدون علامة مائية\n\n"
+            "المنصات المدعومة للتحليل: Instagram 📸 | TikTok 🎵\n\n"
+            "اختر من القائمة أدناه للبدء 👇"
+        ),
+        "help": (
+            "📖 *دليل استخدام Follower Analyzer Bot*\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "🔍 *تحليل حساب*\n"
+            "اختر المنصة (Instagram أو TikTok) ثم أرسل اسم المستخدم وسيعطيك البوت تقريراً كاملاً.\n\n"
+            "🔄 *مقارنة حسابين*\n"
+            "قارن بين حسابين على نفس المنصة أو منصات مختلفة.\n\n"
+            "⬇️ *تحميل فيديوهات TikTok*\n"
+            "أرسل رابط فيديو TikTok وسيتم إرساله لك بدون علامة مائية وبجودة عالية.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "📌 *ملاحظات:*\n"
+            "• يعمل البوت مع الحسابات العامة فقط\n"
+            "• التحليل يشمل آخر 12 منشور\n"
+            "• معدل التفاعل = (متوسط الإعجابات + متوسط التعليقات) ÷ عدد المتابعين × 100\n"
+            "• حد حجم الفيديو للتحميل: 50MB\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "btn_analyze": "🔍 تحليل حساب",
+        "btn_compare": "🔄 مقارنة حسابين",
+        "btn_download": "⬇️ تحميل محتوى",
+        "btn_help": "📖 المساعدة",
+        "btn_back": "🔙 القائمة الرئيسية",
+        "btn_back_short": "🔙 رجوع",
+        "btn_lang": "🌐 English",
+        "btn_analyze_another": "🔍 تحليل حساب آخر",
+        "btn_compare_short": "🔄 مقارنة",
+        "btn_home": "🏠 القائمة الرئيسية",
+        "choose_platform_analyze": "🔍 *تحليل حساب*\n\nاختر المنصة التي تريد تحليلها:",
+        "choose_platform_compare": "🔄 *مقارنة حسابين*\n\nاختر منصة الحساب الأول:",
+        "send_username_analyze": "📝 *تحليل {platform}*\n\nأرسل اسم المستخدم (username) للحساب الذي تريد تحليله:\n\n_مثال: `cristiano` أو `@cristiano`_",
+        "send_username_compare1": "🔄 *مقارنة - الحساب الأول ({platform})*\n\nأرسل اسم المستخدم للحساب الأول:",
+        "send_username_compare2": "🔄 *مقارنة - الحساب الثاني ({platform})*\n\nأرسل اسم المستخدم للحساب الثاني:",
+        "invalid_username": "⚠️ اسم المستخدم غير صحيح. أرسل اسم مستخدم صالح.",
+        "analyzing": "⏳ جاري تحليل حساب @{username} على {platform}...\n\n🔄 جلب البيانات...",
+        "analyzing2": "⏳ جاري تحليل حساب @{username}...\n\n✅ تم جلب البيانات\n🔄 جاري التحليل...",
+        "analyze_error": "❌ حدث خطأ أثناء التحليل. تأكد من:\n• صحة اسم المستخدم\n• أن الحساب عام وليس خاصاً\n• المحاولة مرة أخرى لاحقاً",
+        "saved_account1": "✅ تم حفظ الحساب الأول: @{username} ({platform})\n\nاختر منصة الحساب الثاني:",
+        "comparing": "⏳ جاري تحليل ومقارنة الحسابين...\n\n🔄 تحليل @{username}...",
+        "comparing2": "⏳ جاري تحليل ومقارنة الحسابين...\n\n✅ تم تحليل @{u1}\n🔄 تحليل @{u2}...",
+        "comparing3": "⏳ جاري تحليل ومقارنة الحسابين...\n\n✅ تم تحليل @{u1}\n✅ تم تحليل @{u2}\n🔄 إعداد التقرير المقارن...",
+        "compare_error": "❌ حدث خطأ أثناء المقارنة. تأكد من صحة أسماء المستخدمين وأن الحسابات عامة.",
+        "download_text": (
+            "⬇️ *تحميل فيديوهات TikTok*\n\n"
+            "أرسل رابط الفيديو من TikTok وسيتم إرساله لك فوراً بدون علامة مائية وبجودة HD.\n\n"
+            "🎵 *TikTok* — فيديوهات بدون واترمارك HD\n\n"
+            "💡 أمثلة على الروابط المدعومة:\n"
+            "`https://vm.tiktok.com/xxxxx`\n"
+            "`https://www.tiktok.com/@user/video/xxxxx`\n\n"
+            "_ملاحظة: الحد الأقصى للحجم 50MB_"
+        ),
+        "invalid_url": (
+            "⚠️ *الرابط غير مدعوم*\n\n"
+            "هذه الميزة تدعم TikTok فقط حالياً.\n\n"
+            "🎵 أرسل رابطاً من TikTok مثل:\n"
+            "`https://vm.tiktok.com/xxxxx`\n"
+            "`https://www.tiktok.com/@user/video/xxxxx`"
+        ),
+        "downloading1": "⏳ جاري تحميل المحتوى من TikTok 🎵...\n🔄 يرجى الانتظار...",
+        "downloading2": "⏳ جاري تحميل المحتوى من TikTok 🎵...\n🔄 جلب رابط الفيديو...",
+        "downloading3": "⏳ جاري تحميل المحتوى من TikTok 🎵...\n📥 تحميل الفيديو...",
+        "too_large": "⚠️ حجم الفيديو كبير جداً (أكثر من 50MB).\nتيليغرام يسمح بحد 50MB فقط.\nجرب فيديو أقصر.",
+        "sending": "✅ تم التحميل! جاري الإرسال...",
+        "download_fail": "❌ فشل تحميل الفيديو. حاول مرة أخرى.",
+        "tiktok_fail": "❌ تعذر التحميل من TikTok\n\n{error}",
+        "unexpected_error": "❌ حدث خطأ غير متوقع. حاول مرة أخرى.",
+        "unknown_msg": "🤔 لم أفهم طلبك. استخدم القائمة الرئيسية:",
+        "maintenance": "⛔️ البوت تحت الصيانة حالياً. يرجى المحاولة لاحقاً 🔧",
+        "banned": "⛔️ لقد تم حظرك من استخدام هذا البوت.",
+        # تقرير التحليل
+        "report_title": "{icon} *تقرير تحليل {platform}*",
+        "report_account_info": "👤 *معلومات الحساب*",
+        "report_name": "• الاسم: {name}",
+        "report_username": "• المعرف: @{username}",
+        "report_followers": "• المتابعون: `{followers}`",
+        "report_following": "• المتابَعون: `{following}`",
+        "report_posts": "• عدد المنشورات: `{posts}`",
+        "report_total_likes": "❤️ إجمالي الإعجابات: `{likes}`",
+        "report_engagement": "📊 *تحليل التفاعل* _(آخر {posts} منشور)_",
+        "report_avg_likes": "• متوسط الإعجابات: `{likes}`",
+        "report_avg_comments": "• متوسط التعليقات: `{comments}`",
+        "report_engagement_rate": "• معدل التفاعل: `{rate}%` — {label}",
+        "report_followers_analysis": "👥 *تحليل المتابعين* _(تقديري)_",
+        "report_real": "• المتابعون الحقيقيون: `{pct}%`",
+        "report_inactive": "• المتابعون غير النشطين: `{pct}%`",
+        "report_fake": "• المتابعون الوهميون: `{pct}%`",
+        "report_growth": "📈 *تحليل نمو الحساب*",
+        "report_rating": "🏆 *التقييم النهائي*",
+        "report_rating_line": "{color} *{label}* — النقاط: `{score}/100`",
+        "report_source_note": "\n_⚠️ ملاحظة: البيانات تقديرية (الحساب غير متاح عبر API)_",
+        "eng_excellent": "ممتاز 🔥",
+        "eng_good": "جيد ✅",
+        "eng_average": "متوسط ⚠️",
+        "eng_poor": "ضعيف ❌",
+        # تقرير المقارنة
+        "compare_title": "🔄 *تقرير المقارنة*",
+        "compare_detail": "📊 *المقارنة التفصيلية*",
+        "compare_followers": "👥 المتابعون:",
+        "compare_engagement": "💬 معدل التفاعل:",
+        "compare_avg_likes": "❤️ متوسط الإعجابات:",
+        "compare_real": "👤 المتابعون الحقيقيون:",
+        "compare_rating": "🏆 التقييم النهائي:",
+        "compare_winner": "🏆 الفائز: @{username} ({icon})",
+        "compare_tie": "🤝 تعادل بين الحسابين",
+    },
+    "en": {
+        "welcome": (
+            "🔍 *Welcome to Follower Analyzer Bot!*\n\n"
+            "I'm a social media account analysis bot. I help you:\n\n"
+            "📊 Check *follower quality* and real follower ratio\n"
+            "💬 Calculate the exact *engagement rate*\n"
+            "📈 Analyze *account growth* patterns\n"
+            "⭐ Get a *full account rating*\n"
+            "⬇️ *Download TikTok videos* without watermark\n\n"
+            "Supported platforms for analysis: Instagram 📸 | TikTok 🎵\n\n"
+            "Choose from the menu below to get started 👇"
+        ),
+        "help": (
+            "📖 *Follower Analyzer Bot — Help Guide*\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "🔍 *Analyze Account*\n"
+            "Choose a platform (Instagram or TikTok), send the username, and get a full report.\n\n"
+            "🔄 *Compare Two Accounts*\n"
+            "Compare two accounts on the same or different platforms.\n\n"
+            "⬇️ *Download TikTok Videos*\n"
+            "Send a TikTok link and receive it without watermark in HD quality.\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            "📌 *Notes:*\n"
+            "• Works with public accounts only\n"
+            "• Analysis covers the last 12 posts\n"
+            "• Engagement rate = (avg likes + avg comments) ÷ followers × 100\n"
+            "• Max video download size: 50MB\n\n"
+            "━━━━━━━━━━━━━━━━━━━━━━━"
+        ),
+        "btn_analyze": "🔍 Analyze Account",
+        "btn_compare": "🔄 Compare Accounts",
+        "btn_download": "⬇️ Download Content",
+        "btn_help": "📖 Help",
+        "btn_back": "🔙 Main Menu",
+        "btn_back_short": "🔙 Back",
+        "btn_lang": "🌐 العربية",
+        "btn_analyze_another": "🔍 Analyze Another",
+        "btn_compare_short": "🔄 Compare",
+        "btn_home": "🏠 Main Menu",
+        "choose_platform_analyze": "🔍 *Analyze Account*\n\nChoose the platform you want to analyze:",
+        "choose_platform_compare": "🔄 *Compare Two Accounts*\n\nChoose the platform for the first account:",
+        "send_username_analyze": "📝 *Analyze {platform}*\n\nSend the username of the account you want to analyze:\n\n_Example: `cristiano` or `@cristiano`_",
+        "send_username_compare1": "🔄 *Compare — First Account ({platform})*\n\nSend the username of the first account:",
+        "send_username_compare2": "🔄 *Compare — Second Account ({platform})*\n\nSend the username of the second account:",
+        "invalid_username": "⚠️ Invalid username. Please send a valid username.",
+        "analyzing": "⏳ Analyzing @{username} on {platform}...\n\n🔄 Fetching data...",
+        "analyzing2": "⏳ Analyzing @{username}...\n\n✅ Data fetched\n🔄 Analyzing...",
+        "analyze_error": "❌ An error occurred. Please make sure:\n• The username is correct\n• The account is public\n• Try again later",
+        "saved_account1": "✅ First account saved: @{username} ({platform})\n\nChoose the platform for the second account:",
+        "comparing": "⏳ Analyzing and comparing both accounts...\n\n🔄 Analyzing @{username}...",
+        "comparing2": "⏳ Analyzing and comparing both accounts...\n\n✅ Analyzed @{u1}\n🔄 Analyzing @{u2}...",
+        "comparing3": "⏳ Analyzing and comparing both accounts...\n\n✅ Analyzed @{u1}\n✅ Analyzed @{u2}\n🔄 Preparing comparison report...",
+        "compare_error": "❌ An error occurred during comparison. Make sure both usernames are correct and accounts are public.",
+        "download_text": (
+            "⬇️ *Download TikTok Videos*\n\n"
+            "Send a TikTok video link and receive it instantly in HD without watermark.\n\n"
+            "🎵 *TikTok* — HD videos, no watermark\n\n"
+            "💡 Supported link examples:\n"
+            "`https://vm.tiktok.com/xxxxx`\n"
+            "`https://www.tiktok.com/@user/video/xxxxx`\n\n"
+            "_Note: Max file size is 50MB_"
+        ),
+        "invalid_url": (
+            "⚠️ *Unsupported link*\n\n"
+            "This feature supports TikTok only.\n\n"
+            "🎵 Send a TikTok link like:\n"
+            "`https://vm.tiktok.com/xxxxx`\n"
+            "`https://www.tiktok.com/@user/video/xxxxx`"
+        ),
+        "downloading1": "⏳ Downloading from TikTok 🎵...\n🔄 Please wait...",
+        "downloading2": "⏳ Downloading from TikTok 🎵...\n🔄 Fetching video link...",
+        "downloading3": "⏳ Downloading from TikTok 🎵...\n📥 Downloading video...",
+        "too_large": "⚠️ Video is too large (over 50MB).\nTelegram allows max 50MB.\nTry a shorter video.",
+        "sending": "✅ Downloaded! Sending now...",
+        "download_fail": "❌ Failed to download the video. Please try again.",
+        "tiktok_fail": "❌ Could not download from TikTok\n\n{error}",
+        "unexpected_error": "❌ An unexpected error occurred. Please try again.",
+        "unknown_msg": "🤔 I didn't understand that. Use the main menu:",
+        "maintenance": "⛔️ The bot is currently under maintenance. Please try again later 🔧",
+        "banned": "⛔️ You have been banned from using this bot.",
+        # report
+        "report_title": "{icon} *{platform} Analysis Report*",
+        "report_account_info": "👤 *Account Info*",
+        "report_name": "• Name: {name}",
+        "report_username": "• Username: @{username}",
+        "report_followers": "• Followers: `{followers}`",
+        "report_following": "• Following: `{following}`",
+        "report_posts": "• Posts: `{posts}`",
+        "report_total_likes": "❤️ Total Likes: `{likes}`",
+        "report_engagement": "📊 *Engagement Analysis* _(last {posts} posts)_",
+        "report_avg_likes": "• Avg Likes: `{likes}`",
+        "report_avg_comments": "• Avg Comments: `{comments}`",
+        "report_engagement_rate": "• Engagement Rate: `{rate}%` — {label}",
+        "report_followers_analysis": "👥 *Follower Analysis* _(estimated)_",
+        "report_real": "• Real Followers: `{pct}%`",
+        "report_inactive": "• Inactive Followers: `{pct}%`",
+        "report_fake": "• Fake Followers: `{pct}%`",
+        "report_growth": "📈 *Account Growth Analysis*",
+        "report_rating": "🏆 *Final Rating*",
+        "report_rating_line": "{color} *{label}* — Score: `{score}/100`",
+        "report_source_note": "\n_⚠️ Note: Data is estimated (account not available via API)_",
+        "eng_excellent": "Excellent 🔥",
+        "eng_good": "Good ✅",
+        "eng_average": "Average ⚠️",
+        "eng_poor": "Poor ❌",
+        # comparison
+        "compare_title": "🔄 *Comparison Report*",
+        "compare_detail": "📊 *Detailed Comparison*",
+        "compare_followers": "👥 Followers:",
+        "compare_engagement": "💬 Engagement Rate:",
+        "compare_avg_likes": "❤️ Avg Likes:",
+        "compare_real": "👤 Real Followers:",
+        "compare_rating": "🏆 Final Rating:",
+        "compare_winner": "🏆 Winner: @{username} ({icon})",
+        "compare_tie": "🤝 It's a tie!",
+    }
+}
 
-أنا بوت متخصص في تحليل حسابات السوشيال ميديا، أساعدك على:
-
-📊 معرفة *جودة المتابعين* ونسبتهم الحقيقية
-💬 حساب *معدل التفاعل* الدقيق
-📈 تحليل *نمو الحساب* وطبيعته
-⭐ *تقييم شامل* للحساب
-⬇️ *تحميل فيديوهات TikTok* بدون علامة مائية
-
-المنصات المدعومة للتحليل: Instagram 📸 | TikTok 🎵
-
-اختر من القائمة أدناه للبدء 👇
-"""
-
-HELP_TEXT = """
-📖 *دليل استخدام Follower Analyzer Bot*
-
-━━━━━━━━━━━━━━━━━━━━━━━
-
-🔍 *تحليل حساب*
-اختر المنصة (Instagram أو TikTok) ثم أرسل اسم المستخدم وسيعطيك البوت تقريراً كاملاً.
-
-🔄 *مقارنة حسابين*
-قارن بين حسابين على نفس المنصة أو منصات مختلفة.
-
-⬇️ *تحميل فيديوهات TikTok*
-أرسل رابط فيديو TikTok وسيتم إرساله لك بدون علامة مائية وبجودة عالية.
-
-━━━━━━━━━━━━━━━━━━━━━━━
-
-📌 *ملاحظات:*
-• يعمل البوت مع الحسابات العامة فقط
-• التحليل يشمل آخر 12 منشور
-• معدل التفاعل = (متوسط الإعجابات + متوسط التعليقات) ÷ عدد المتابعين × 100
-• حد حجم الفيديو للتحميل: 50MB
-
-━━━━━━━━━━━━━━━━━━━━━━━
-"""
+def t(context, key: str, **kwargs) -> str:
+    """ترجمة نص حسب لغة المستخدم"""
+    lang = get_user_lang(context)
+    text = TEXTS.get(lang, TEXTS["ar"]).get(key, TEXTS["ar"].get(key, key))
+    if kwargs:
+        text = text.format(**kwargs)
+    return text
 
 
 # ===================== لوحات المفاتيح =====================
 
-def get_main_keyboard():
+def get_main_keyboard(context):
+    lang = get_user_lang(context)
+    tx = TEXTS[lang]
     keyboard = [
         [
-            InlineKeyboardButton("🔍 تحليل حساب", callback_data="analyze"),
-            InlineKeyboardButton("🔄 مقارنة حسابين", callback_data="compare"),
+            InlineKeyboardButton(tx["btn_analyze"], callback_data="analyze"),
+            InlineKeyboardButton(tx["btn_compare"], callback_data="compare"),
         ],
         [
-            InlineKeyboardButton("⬇️ تحميل محتوى", callback_data="download"),
+            InlineKeyboardButton(tx["btn_download"], callback_data="download"),
         ],
         [
-            InlineKeyboardButton("📖 المساعدة", callback_data="help"),
+            InlineKeyboardButton(tx["btn_help"], callback_data="help"),
+            InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
         ],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_platform_keyboard(action: str):
+def get_platform_keyboard(action: str, context):
+    lang = get_user_lang(context)
+    tx = TEXTS[lang]
     keyboard = [
         [
             InlineKeyboardButton("📸 Instagram", callback_data=f"platform_{action}_instagram"),
             InlineKeyboardButton("🎵 TikTok", callback_data=f"platform_{action}_tiktok"),
         ],
-        [InlineKeyboardButton("🔙 رجوع", callback_data="back_main")],
+        [InlineKeyboardButton(tx["btn_back_short"], callback_data="back_main")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_back_keyboard():
-    keyboard = [[InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_main")]]
+def get_back_keyboard(context):
+    lang = get_user_lang(context)
+    tx = TEXTS[lang]
+    keyboard = [[InlineKeyboardButton(tx["btn_back"], callback_data="back_main")]]
     return InlineKeyboardMarkup(keyboard)
 
 
-def get_analyze_again_keyboard(platform: str):
+def get_analyze_again_keyboard(platform: str, context):
+    lang = get_user_lang(context)
+    tx = TEXTS[lang]
     keyboard = [
         [
-            InlineKeyboardButton("🔍 تحليل حساب آخر", callback_data=f"platform_analyze_{platform}"),
-            InlineKeyboardButton("🔄 مقارنة", callback_data="compare"),
+            InlineKeyboardButton(tx["btn_analyze_another"], callback_data=f"platform_analyze_{platform}"),
+            InlineKeyboardButton(tx["btn_compare_short"], callback_data="compare"),
         ],
-        [InlineKeyboardButton("🏠 القائمة الرئيسية", callback_data="back_main")],
+        [InlineKeyboardButton(tx["btn_home"], callback_data="back_main")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -200,40 +411,41 @@ def get_analyze_again_keyboard(platform: str):
 # ===================== معالجات الأوامر =====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """أمر البدء"""
     user = update.effective_user
     stats = load_stats()
-    # فحص وضع الصيانة
     if stats.get("maintenance", False) and user.id != ADMIN_ID:
-        await update.message.reply_text("⛔️ البوت تحت الصيانة حالياً. يرجى المحاولة لاحقاً 🔧")
+        lang = context.user_data.get("lang", "ar")
+        await update.message.reply_text(TEXTS[lang]["maintenance"])
         return MAIN_MENU
-    # فحص الحظر
     if str(user.id) in stats.get("banned", []):
-        await update.message.reply_text("⛔️ لقد تم حظرك من استخدام هذا البوت.")
+        lang = context.user_data.get("lang", "ar")
+        await update.message.reply_text(TEXTS[lang]["banned"])
         return MAIN_MENU
     register_user(user.id, user.username, user.full_name)
-    context.user_data.clear()
+    # تعيين اللغة الافتراضية إذا لم تكن محددة
+    if "lang" not in context.user_data:
+        context.user_data["lang"] = "ar"
+    context.user_data.pop("analyze_platform", None)
+    context.user_data.pop("compare_platform_1", None)
+    context.user_data.pop("compare_platform_2", None)
+    context.user_data.pop("compare_username_1", None)
     await update.message.reply_text(
-        WELCOME_TEXT,
+        t(context, "welcome"),
         parse_mode=ParseMode.MARKDOWN,
-        reply_markup=get_main_keyboard(),
+        reply_markup=get_main_keyboard(context),
     )
     return MAIN_MENU
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """أمر الإحصائيات - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
         return
-
     stats = load_stats()
     total_users = len(stats["users"])
     total_analyses = stats.get("total_analyses", 0)
     total_comparisons = stats.get("total_comparisons", 0)
-
-    # آخر 10 مستخدمين
     recent_users = list(stats["users"].items())[-10:]
     recent_text = ""
     for uid, udata in reversed(recent_users):
@@ -241,7 +453,6 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         joined = udata.get('joined', '')
         analyses = udata.get('analyses', 0)
         recent_text += f"\n• {uname} | تحليلات: {analyses} | {joined}"
-
     report = f"""
 📊 *إحصائيات البوت*
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -259,7 +470,6 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """إرسال رسالة لجميع المستخدمين - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
@@ -281,7 +491,6 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
 
 async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """حظر مستخدم - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
@@ -302,7 +511,6 @@ async def ban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 
 async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """رفع حظر مستخدم - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
@@ -321,7 +529,6 @@ async def unban_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """عرض قائمة المستخدمين - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
@@ -341,7 +548,6 @@ async def users_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 
 async def topusers_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """أكثر المستخدمين نشاطاً - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
@@ -359,7 +565,6 @@ async def topusers_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """تفعيل/تعطيل وضع الصيانة - للمالك فقط"""
     user = update.effective_user
     if ADMIN_ID == 0 or user.id != ADMIN_ID:
         await update.message.reply_text("⛔️ هذا الأمر مخصص لمالك البوت فقط.")
@@ -373,11 +578,10 @@ async def maintenance_command(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """أمر المساعدة"""
     await update.message.reply_text(
-        HELP_TEXT,
+        t(context, "help"),
         parse_mode=ParseMode.MARKDOWN,
-        reply_markup=get_back_keyboard(),
+        reply_markup=get_back_keyboard(context),
     )
     return MAIN_MENU
 
@@ -385,59 +589,63 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 # ===================== معالجات الأزرار =====================
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """معالج جميع أزرار Inline"""
     query = update.callback_query
     await query.answer()
     data = query.data
 
+    # تبديل اللغة
+    if data == "switch_lang":
+        current = context.user_data.get("lang", "ar")
+        context.user_data["lang"] = "en" if current == "ar" else "ar"
+        await query.edit_message_text(
+            t(context, "welcome"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_main_keyboard(context),
+        )
+        return MAIN_MENU
+
     # القائمة الرئيسية
     if data == "back_main":
-        context.user_data.clear()
+        context.user_data.pop("analyze_platform", None)
+        context.user_data.pop("compare_platform_1", None)
+        context.user_data.pop("compare_platform_2", None)
+        context.user_data.pop("compare_username_1", None)
         await query.edit_message_text(
-            WELCOME_TEXT,
+            t(context, "welcome"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_main_keyboard(context),
         )
         return MAIN_MENU
 
     elif data == "analyze":
         await query.edit_message_text(
-            "🔍 *تحليل حساب*\n\nاختر المنصة التي تريد تحليلها:",
+            t(context, "choose_platform_analyze"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_platform_keyboard("analyze"),
+            reply_markup=get_platform_keyboard("analyze", context),
         )
         return WAITING_PLATFORM_ANALYZE
 
     elif data == "compare":
         await query.edit_message_text(
-            "🔄 *مقارنة حسابين*\n\nاختر منصة الحساب الأول:",
+            t(context, "choose_platform_compare"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_platform_keyboard("compare1"),
+            reply_markup=get_platform_keyboard("compare1", context),
         )
         return WAITING_PLATFORM_COMPARE_1
 
     elif data == "help":
         await query.edit_message_text(
-            HELP_TEXT,
+            t(context, "help"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(),
+            reply_markup=get_back_keyboard(context),
         )
         return MAIN_MENU
 
     elif data == "download":
-        download_text = (
-            "⬇️ *تحميل فيديوهات TikTok*\n\n"
-            "أرسل رابط الفيديو من TikTok وسيتم إرساله لك فوراً بدون علامة مائية وبجودة HD.\n\n"
-            "🎵 *TikTok* — فيديوهات بدون واترمارك HD\n\n"
-            "💡 أمثلة على الروابط المدعومة:\n"
-            "`https://vm.tiktok.com/xxxxx`\n"
-            "`https://www.tiktok.com/@user/video/xxxxx`\n\n"
-            "_ملاحظة: الحد الأقصى للحجم 50MB_"
-        )
         await query.edit_message_text(
-            download_text,
+            t(context, "download_text"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(),
+            reply_markup=get_back_keyboard(context),
         )
         return WAITING_DOWNLOAD_URL
 
@@ -447,9 +655,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data["analyze_platform"] = platform
         platform_name = "Instagram 📸" if platform == "instagram" else "TikTok 🎵"
         await query.edit_message_text(
-            f"📝 *تحليل {platform_name}*\n\n"
-            f"أرسل اسم المستخدم (username) للحساب الذي تريد تحليله:\n\n"
-            f"_مثال: `cristiano` أو `@cristiano`_",
+            t(context, "send_username_analyze", platform=platform_name),
             parse_mode=ParseMode.MARKDOWN,
         )
         return WAITING_USERNAME_ANALYZE
@@ -460,8 +666,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data["compare_platform_1"] = platform
         platform_name = "Instagram 📸" if platform == "instagram" else "TikTok 🎵"
         await query.edit_message_text(
-            f"🔄 *مقارنة - الحساب الأول ({platform_name})*\n\n"
-            f"أرسل اسم المستخدم للحساب الأول:",
+            t(context, "send_username_compare1", platform=platform_name),
             parse_mode=ParseMode.MARKDOWN,
         )
         return WAITING_USERNAME_COMPARE_1
@@ -472,8 +677,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         context.user_data["compare_platform_2"] = platform
         platform_name = "Instagram 📸" if platform == "instagram" else "TikTok 🎵"
         await query.edit_message_text(
-            f"🔄 *مقارنة - الحساب الثاني ({platform_name})*\n\n"
-            f"أرسل اسم المستخدم للحساب الثاني:",
+            t(context, "send_username_compare2", platform=platform_name),
             parse_mode=ParseMode.MARKDOWN,
         )
         return WAITING_USERNAME_COMPARE_2
@@ -484,81 +688,64 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 # ===================== معالجات الرسائل =====================
 
 async def receive_username_analyze(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """استقبال اسم المستخدم للتحليل"""
     username = update.message.text.strip().lstrip("@")
     platform = context.user_data.get("analyze_platform", "instagram")
 
     if not username or len(username) < 2:
-        await update.message.reply_text(
-            "⚠️ اسم المستخدم غير صحيح. أرسل اسم مستخدم صالح.",
-        )
+        await update.message.reply_text(t(context, "invalid_username"))
         return WAITING_USERNAME_ANALYZE
 
-    # رسالة الانتظار
     loading_msg = await update.message.reply_text(
-        f"⏳ جاري تحليل حساب @{username} على {platform.capitalize()}...\n\n"
-        "🔄 جلب البيانات...",
+        t(context, "analyzing", username=username, platform=platform.capitalize()),
     )
 
     try:
-        # تحليل الحساب
         result = analyze_account(username, platform)
         increment_analysis(update.effective_user.id)
 
-        # تحديث رسالة الانتظار
         await loading_msg.edit_text(
-            f"⏳ جاري تحليل حساب @{username}...\n\n"
-            "✅ تم جلب البيانات\n"
-            "🔄 جاري التحليل...",
+            t(context, "analyzing2", username=username),
         )
-
         await asyncio.sleep(1)
 
-        # بناء التقرير
-        report = build_report(result)
+        report = build_report(result, context)
 
         await loading_msg.delete()
         await update.message.reply_text(
             report,
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_analyze_again_keyboard(platform),
+            reply_markup=get_analyze_again_keyboard(platform, context),
         )
 
     except Exception as e:
         logger.error(f"خطأ في التحليل: {e}")
         await loading_msg.edit_text(
-            "❌ حدث خطأ أثناء التحليل. تأكد من:\n"
-            "• صحة اسم المستخدم\n"
-            "• أن الحساب عام وليس خاصاً\n"
-            "• المحاولة مرة أخرى لاحقاً",
-            reply_markup=get_back_keyboard(),
+            t(context, "analyze_error"),
+            reply_markup=get_back_keyboard(context),
         )
 
     return MAIN_MENU
 
 
 async def receive_username_compare_1(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """استقبال اسم المستخدم الأول للمقارنة"""
     username = update.message.text.strip().lstrip("@")
     if not username or len(username) < 2:
-        await update.message.reply_text("⚠️ اسم مستخدم غير صحيح. أعد المحاولة.")
+        await update.message.reply_text(t(context, "invalid_username"))
         return WAITING_USERNAME_COMPARE_1
 
     context.user_data["compare_username_1"] = username
     platform_1 = context.user_data.get("compare_platform_1", "instagram")
     await update.message.reply_text(
-        f"✅ تم حفظ الحساب الأول: @{username} ({platform_1.capitalize()})\n\n"
-        "اختر منصة الحساب الثاني:",
-        reply_markup=get_platform_keyboard("compare2"),
+        t(context, "saved_account1", username=username, platform=platform_1.capitalize()),
+        reply_markup=get_platform_keyboard("compare2", context),
     )
     return WAITING_PLATFORM_COMPARE_2
 
 
 async def receive_username_compare_2(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """استقبال اسم المستخدم الثاني للمقارنة"""
     username_2 = update.message.text.strip().lstrip("@")
     if not username_2 or len(username_2) < 2:
-        await update.message.reply_text("⚠️ اسم مستخدم غير صحيح. أعد المحاولة.")
+        await update.message.reply_text(t(context, "invalid_username"))
         return WAITING_USERNAME_COMPARE_2
 
     username_1 = context.user_data.get("compare_username_1", "")
@@ -566,44 +753,38 @@ async def receive_username_compare_2(update: Update, context: ContextTypes.DEFAU
     platform_2 = context.user_data.get("compare_platform_2", "instagram")
 
     loading_msg = await update.message.reply_text(
-        f"⏳ جاري تحليل ومقارنة الحسابين...\n\n"
-        f"🔄 تحليل @{username_1}...",
+        t(context, "comparing", username=username_1),
     )
 
     try:
         result_1 = analyze_account(username_1, platform_1)
         await loading_msg.edit_text(
-            f"⏳ جاري تحليل ومقارنة الحسابين...\n\n"
-            f"✅ تم تحليل @{username_1}\n"
-            f"🔄 تحليل @{username_2}...",
+            t(context, "comparing2", u1=username_1, u2=username_2),
         )
 
         result_2 = analyze_account(username_2, platform_2)
 
         await loading_msg.edit_text(
-            f"⏳ جاري تحليل ومقارنة الحسابين...\n\n"
-            f"✅ تم تحليل @{username_1}\n"
-            f"✅ تم تحليل @{username_2}\n"
-            f"🔄 إعداد التقرير المقارن...",
+            t(context, "comparing3", u1=username_1, u2=username_2),
         )
 
         await asyncio.sleep(1)
 
-        comparison = build_comparison_report(result_1, result_2)
+        comparison = build_comparison_report(result_1, result_2, context)
 
         await loading_msg.delete()
         await update.message.reply_text(
             comparison,
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(),
+            reply_markup=get_back_keyboard(context),
         )
         increment_comparison(update.effective_user.id)
 
     except Exception as e:
         logger.error(f"خطأ في المقارنة: {e}")
         await loading_msg.edit_text(
-            "❌ حدث خطأ أثناء المقارنة. تأكد من صحة أسماء المستخدمين وأن الحسابات عامة.",
-            reply_markup=get_back_keyboard(),
+            t(context, "compare_error"),
+            reply_markup=get_back_keyboard(context),
         )
 
     return MAIN_MENU
@@ -611,8 +792,7 @@ async def receive_username_compare_2(update: Update, context: ContextTypes.DEFAU
 
 # ===================== بناء التقارير =====================
 
-def build_report(data: dict) -> str:
-    """بناء تقرير التحليل الكامل"""
+def build_report(data: dict, context) -> str:
     platform = data.get("platform", "")
     username = data.get("username", "")
     full_name = data.get("full_name", username)
@@ -632,75 +812,72 @@ def build_report(data: dict) -> str:
 
     platform_icon = "📸" if platform == "Instagram" else "🎵"
     verified_badge = " ✅" if is_verified else ""
-    source_note = "" if data_source == "live" else "\n_⚠️ ملاحظة: البيانات تقديرية (الحساب غير متاح عبر API)_"
+    source_note = "" if data_source == "live" else t(context, "report_source_note")
 
-    # تحديد مستوى التفاعل
     if engagement_rate >= 6:
-        engagement_label = "ممتاز 🔥"
+        engagement_label = t(context, "eng_excellent")
     elif engagement_rate >= 3:
-        engagement_label = "جيد ✅"
+        engagement_label = t(context, "eng_good")
     elif engagement_rate >= 1:
-        engagement_label = "متوسط ⚠️"
+        engagement_label = t(context, "eng_average")
     else:
-        engagement_label = "ضعيف ❌"
+        engagement_label = t(context, "eng_poor")
 
     real_pct = follower_analysis.get("real_percentage", 0)
     inactive_pct = follower_analysis.get("inactive_percentage", 0)
     fake_pct = follower_analysis.get("fake_percentage", 0)
 
     growth_icon = growth_analysis.get("growth_icon", "✅")
-    growth_label = growth_analysis.get("growth_label", "نمو طبيعي")
+    growth_label = growth_analysis.get("growth_label", "")
 
     rating_icon = rating.get("icon", "⭐")
-    rating_label = rating.get("label", "جيد")
+    rating_label = rating.get("label", "")
     rating_color = rating.get("color", "🟡")
     rating_score = rating.get("score", 0)
 
-    # بناء شريط التقدم للتفاعل
     engagement_bar = _build_progress_bar(min(engagement_rate, 10), 10)
     real_bar = _build_progress_bar(real_pct, 100)
 
-    # TikTok لديه إجمالي الإعجابات
     tiktok_extra = ""
     if platform == "TikTok" and "total_likes" in data:
-        tiktok_extra = f"❤️ إجمالي الإعجابات: `{format_number(data['total_likes'])}`\n"
+        tiktok_extra = t(context, "report_total_likes", likes=format_number(data['total_likes'])) + "\n"
 
     report = f"""
-{platform_icon} *تقرير تحليل {platform}*
+{t(context, "report_title", icon=platform_icon, platform=platform)}
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-👤 *معلومات الحساب*
-• الاسم: {full_name}{verified_badge}
-• المعرف: @{username}
-• المتابعون: `{format_number(followers)}`
-• المتابَعون: `{format_number(following)}`
-• عدد المنشورات: `{format_number(posts_count)}`
+{t(context, "report_account_info")}
+{t(context, "report_name", name=full_name + verified_badge)}
+{t(context, "report_username", username=username)}
+{t(context, "report_followers", followers=format_number(followers))}
+{t(context, "report_following", following=format_number(following))}
+{t(context, "report_posts", posts=format_number(posts_count))}
 {tiktok_extra}
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 *تحليل التفاعل* _(آخر {posts_analyzed} منشور)_
-• متوسط الإعجابات: `{format_number(avg_likes)}`
-• متوسط التعليقات: `{format_number(avg_comments)}`
-• معدل التفاعل: `{engagement_rate}%` — {engagement_label}
+{t(context, "report_engagement", posts=posts_analyzed)}
+{t(context, "report_avg_likes", likes=format_number(avg_likes))}
+{t(context, "report_avg_comments", comments=format_number(avg_comments))}
+{t(context, "report_engagement_rate", rate=engagement_rate, label=engagement_label)}
 {engagement_bar}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-👥 *تحليل المتابعين* _(تقديري)_
-• المتابعون الحقيقيون: `{real_pct}%`
+{t(context, "report_followers_analysis")}
+{t(context, "report_real", pct=real_pct)}
 {real_bar}
-• المتابعون غير النشطين: `{inactive_pct}%`
-• المتابعون الوهميون: `{fake_pct}%`
+{t(context, "report_inactive", pct=inactive_pct)}
+{t(context, "report_fake", pct=fake_pct)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-📈 *تحليل نمو الحساب*
+{t(context, "report_growth")}
 {growth_icon} {growth_label}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-🏆 *التقييم النهائي*
-{rating_color} *{rating_label}* — النقاط: `{rating_score}/100`
+{t(context, "report_rating")}
+{t(context, "report_rating_line", color=rating_color, label=rating_label, score=rating_score)}
 {rating_icon}
 {source_note}
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -709,8 +886,7 @@ _Follower Analyzer Bot_ 🤖
     return report.strip()
 
 
-def build_comparison_report(data1: dict, data2: dict) -> str:
-    """بناء تقرير المقارنة بين حسابين"""
+def build_comparison_report(data1: dict, data2: dict, context) -> str:
     def get_winner(val1, val2, higher_is_better=True):
         if higher_is_better:
             return "1" if val1 > val2 else ("2" if val2 > val1 else "=")
@@ -741,8 +917,6 @@ def build_comparison_report(data1: dict, data2: dict) -> str:
     s2 = data2.get("rating", {}).get("score", 0)
     al1 = data1.get("avg_likes", 0)
     al2 = data2.get("avg_likes", 0)
-    ac1 = data1.get("avg_comments", 0)
-    ac2 = data2.get("avg_comments", 0)
 
     w_followers = get_winner(f1, f2)
     w_engagement = get_winner(e1, e2)
@@ -750,44 +924,43 @@ def build_comparison_report(data1: dict, data2: dict) -> str:
     w_score = get_winner(s1, s2)
     w_likes = get_winner(al1, al2)
 
-    # الفائز العام
     score_1_wins = sum(1 for w in [w_followers, w_engagement, w_real, w_score, w_likes] if w == "1")
     score_2_wins = sum(1 for w in [w_followers, w_engagement, w_real, w_score, w_likes] if w == "2")
 
     if score_1_wins > score_2_wins:
-        overall_winner = f"🏆 الفائز: @{u1} ({p1_icon})"
+        overall_winner = t(context, "compare_winner", username=u1, icon=p1_icon)
     elif score_2_wins > score_1_wins:
-        overall_winner = f"🏆 الفائز: @{u2} ({p2_icon})"
+        overall_winner = t(context, "compare_winner", username=u2, icon=p2_icon)
     else:
-        overall_winner = "🤝 تعادل بين الحسابين"
+        overall_winner = t(context, "compare_tie")
 
     report = f"""
-🔄 *تقرير المقارنة*
+{t(context, "compare_title")}
 ━━━━━━━━━━━━━━━━━━━━━━━
 
 {p1_icon} *@{u1}*  VS  {p2_icon} *@{u2}*
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-📊 *المقارنة التفصيلية*
+{t(context, "compare_detail")}
 
-👥 المتابعون:
+{t(context, "compare_followers")}
 {winner_icon(w_followers, 1)} @{u1}: `{format_number(f1)}`
 {winner_icon(w_followers, 2)} @{u2}: `{format_number(f2)}`
 
-💬 معدل التفاعل:
+{t(context, "compare_engagement")}
 {winner_icon(w_engagement, 1)} @{u1}: `{e1}%`
 {winner_icon(w_engagement, 2)} @{u2}: `{e2}%`
 
-❤️ متوسط الإعجابات:
+{t(context, "compare_avg_likes")}
 {winner_icon(w_likes, 1)} @{u1}: `{format_number(al1)}`
 {winner_icon(w_likes, 2)} @{u2}: `{format_number(al2)}`
 
-👤 المتابعون الحقيقيون:
+{t(context, "compare_real")}
 {winner_icon(w_real, 1)} @{u1}: `{r1}%`
 {winner_icon(w_real, 2)} @{u2}: `{r2}%`
 
-🏆 التقييم النهائي:
+{t(context, "compare_rating")}
 {winner_icon(w_score, 1)} @{u1}: `{s1}/100` — {data1.get('rating', {}).get('label', '')}
 {winner_icon(w_score, 2)} @{u2}: `{s2}/100` — {data2.get('rating', {}).get('label', '')}
 
@@ -802,7 +975,6 @@ _Follower Analyzer Bot_ 🤖
 
 
 def _build_progress_bar(value: float, max_value: float, length: int = 10) -> str:
-    """بناء شريط تقدم نصي"""
     filled = int((value / max_value) * length)
     filled = max(0, min(filled, length))
     bar = "█" * filled + "░" * (length - filled)
@@ -823,7 +995,6 @@ def download_tiktok(url: str) -> dict:
         data = r.json()
         if data.get("code") == 0:
             video_data = data.get("data", {})
-            # تفضيل HD إذا كان متاحاً
             video_url = video_data.get("hdplay") or video_data.get("play")
             title = video_data.get("title", "TikTok Video")
             duration = video_data.get("duration", 0)
@@ -840,72 +1011,10 @@ def download_tiktok(url: str) -> dict:
         return {"success": False, "error": str(e)}
 
 
-def download_with_ytdlp(url: str, platform: str) -> dict:
-    """تحميل فيديو باستخدام yt-dlp (Instagram وYouTube)"""
-    import yt_dlp
-
-    tmpdir = tempfile.mkdtemp()
-    try:
-        ydl_opts = {
-            "format": "best[height<=720][ext=mp4]/best[height<=720]/best[ext=mp4]/best",
-            "outtmpl": f"{tmpdir}/video.%(ext)s",
-            "quiet": True,
-            "no_warnings": True,
-            "merge_output_format": "mp4",
-            "noplaylist": True,
-            "socket_timeout": 30,
-            "retries": 3,
-            "http_headers": {
-                "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-            },
-        }
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            title = info.get("title", "Video")[:50]
-            duration = info.get("duration", 0) or 0
-
-            files = glob.glob(f"{tmpdir}/*")
-            if not files:
-                return {"success": False, "error": "لم يتم إيجاد الملف المحمل", "tmpdir": tmpdir}
-
-            file_path = files[0]
-            file_size = os.path.getsize(file_path)
-
-            return {
-                "success": True,
-                "file_path": file_path,
-                "title": title,
-                "duration": duration,
-                "file_size": file_size,
-                "platform": platform,
-                "tmpdir": tmpdir,
-            }
-    except yt_dlp.utils.DownloadError as e:
-        import shutil
-        shutil.rmtree(tmpdir, ignore_errors=True)
-        err_msg = str(e).lower()
-        if "private" in err_msg or "login" in err_msg or "sign in" in err_msg:
-            return {"success": False, "error": "المحتوى خاص أو يتطلب تسجيل دخول"}
-        elif "not available" in err_msg or "unavailable" in err_msg:
-            return {"success": False, "error": "المحتوى غير متاح"}
-        elif "age" in err_msg:
-            return {"success": False, "error": "المحتوى مقيد بالسن"}
-        else:
-            return {"success": False, "error": "تعذر تحميل المحتوى - تأكد من صحة الرابط"}
-    except Exception as e:
-        import shutil
-        shutil.rmtree(tmpdir, ignore_errors=True)
-        return {"success": False, "error": str(e)[:100]}
-
-
 async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """استقبال رابط التحميل ومعالجته"""
     import shutil
 
     url = update.message.text.strip()
-
-    # التحقق من صحة الرابط
     url_lower = url.lower()
     supported_domains = [
         "tiktok.com", "vm.tiktok.com", "vt.tiktok.com", "m.tiktok.com",
@@ -913,116 +1022,91 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
     is_valid = url_lower.startswith("http") and any(d in url_lower for d in supported_domains)
     if not is_valid:
         await update.message.reply_text(
-            "⚠️ *الرابط غير مدعوم*\n\n"
-            "هذه الميزة تدعم TikTok فقط حالياً.\n\n"
-            "🎵 أرسل رابطاً من TikTok مثل:\n"
-            "`https://vm.tiktok.com/xxxxx`\n"
-            "`https://www.tiktok.com/@user/video/xxxxx`",
+            t(context, "invalid_url"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(),
+            reply_markup=get_back_keyboard(context),
         )
         return WAITING_DOWNLOAD_URL
 
-    # TikTok فقط
-    platform_name = "TikTok 🎵"
-
-    loading_msg = await update.message.reply_text(
-        f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
-        "🔄 يرجى الانتظار..."
-    )
+    loading_msg = await update.message.reply_text(t(context, "downloading1"))
 
     try:
-        result = None
         tmpdir_to_clean = None
 
-        if True:  # TikTok only
-            # استخدام tikwm API لـ TikTok
-            await loading_msg.edit_text(
-                f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
-                "🔄 جلب رابط الفيديو..."
+        await loading_msg.edit_text(t(context, "downloading2"))
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, download_tiktok, url
+        )
+
+        if result["success"]:
+            video_url = result["url"]
+            title = result.get("title", "TikTok Video")
+            duration = result.get("duration", 0)
+
+            await loading_msg.edit_text(t(context, "downloading3"))
+
+            video_response = requests.get(
+                video_url,
+                timeout=60,
+                stream=True,
+                headers={"User-Agent": "Mozilla/5.0", "Referer": "https://www.tiktok.com/"}
             )
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, download_tiktok, url
-            )
 
-            if result["success"]:
-                video_url = result["url"]
-                title = result.get("title", "TikTok Video")
-                duration = result.get("duration", 0)
+            if video_response.status_code == 200:
+                tmpdir_to_clean = tempfile.mkdtemp()
+                file_path = os.path.join(tmpdir_to_clean, "tiktok_video.mp4")
+                with open(file_path, "wb") as f:
+                    for chunk in video_response.iter_content(chunk_size=8192):
+                        f.write(chunk)
 
-                await loading_msg.edit_text(
-                    f"⏳ جاري تحميل المحتوى من {platform_name}...\n"
-                    "📥 تحميل الفيديو..."
-                )
+                file_size = os.path.getsize(file_path)
 
-                # تحميل الفيديو من الرابط المباشر
-                video_response = requests.get(
-                    video_url,
-                    timeout=60,
-                    stream=True,
-                    headers={"User-Agent": "Mozilla/5.0", "Referer": "https://www.tiktok.com/"}
-                )
-
-                if video_response.status_code == 200:
-                    # حفظ مؤقت
-                    tmpdir_to_clean = tempfile.mkdtemp()
-                    file_path = os.path.join(tmpdir_to_clean, "tiktok_video.mp4")
-                    with open(file_path, "wb") as f:
-                        for chunk in video_response.iter_content(chunk_size=8192):
-                            f.write(chunk)
-
-                    file_size = os.path.getsize(file_path)
-
-                    if file_size > 50 * 1024 * 1024:
-                        await loading_msg.edit_text(
-                            "⚠️ حجم الفيديو كبير جداً (أكثر من 50MB).\n"
-                            "تيليغرام يسمح بحد 50MB فقط.\n"
-                            "جرب فيديو أقصر.",
-                            reply_markup=get_back_keyboard(),
-                        )
-                        shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
-                        return WAITING_DOWNLOAD_URL
-
-                    await loading_msg.edit_text("✅ تم التحميل! جاري الإرسال...")
-
-                    caption = (
-                        f"⬇️ *{title[:100]}*\n"
-                        f"📱 المنصة: {platform_name}\n"
-                        f"💾 الحجم: {file_size / (1024*1024):.1f} MB\n"
-                        f"⏱ المدة: {duration // 60}:{duration % 60:02d}\n\n"
-                        f"_Follower Analyzer Bot_ 🤖"
-                    )
-
-                    with open(file_path, "rb") as f:
-                        await update.message.reply_video(
-                            video=f,
-                            caption=caption,
-                            parse_mode=ParseMode.MARKDOWN,
-                            supports_streaming=True,
-                            reply_markup=get_back_keyboard(),
-                        )
-
-                    await loading_msg.delete()
-                    shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
-                else:
+                if file_size > 50 * 1024 * 1024:
                     await loading_msg.edit_text(
-                        "❌ فشل تحميل الفيديو. حاول مرة أخرى.",
-                        reply_markup=get_back_keyboard(),
+                        t(context, "too_large"),
+                        reply_markup=get_back_keyboard(context),
                     )
+                    shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
+                    return WAITING_DOWNLOAD_URL
+
+                await loading_msg.edit_text(t(context, "sending"))
+
+                caption = (
+                    f"⬇️ *{title[:100]}*\n"
+                    f"📱 TikTok 🎵\n"
+                    f"💾 {file_size / (1024*1024):.1f} MB\n"
+                    f"⏱ {duration // 60}:{duration % 60:02d}\n\n"
+                    f"_Follower Analyzer Bot_ 🤖"
+                )
+
+                with open(file_path, "rb") as f:
+                    await update.message.reply_video(
+                        video=f,
+                        caption=caption,
+                        parse_mode=ParseMode.MARKDOWN,
+                        supports_streaming=True,
+                        reply_markup=get_back_keyboard(context),
+                    )
+
+                await loading_msg.delete()
+                shutil.rmtree(tmpdir_to_clean, ignore_errors=True)
             else:
                 await loading_msg.edit_text(
-                    f"❌ تعذر التحميل من TikTok\n\n{result.get('error', 'خطأ غير معروف')}",
-                    reply_markup=get_back_keyboard(),
+                    t(context, "download_fail"),
+                    reply_markup=get_back_keyboard(context),
                 )
-
-
+        else:
+            await loading_msg.edit_text(
+                t(context, "tiktok_fail", error=result.get("error", "")),
+                reply_markup=get_back_keyboard(context),
+            )
 
     except Exception as e:
         logger.error(f"خطأ غير متوقع في التحميل: {e}")
         try:
             await loading_msg.edit_text(
-                "❌ حدث خطأ غير متوقع. حاول مرة أخرى.",
-                reply_markup=get_back_keyboard(),
+                t(context, "unexpected_error"),
+                reply_markup=get_back_keyboard(context),
             )
         except:
             pass
@@ -1036,19 +1120,42 @@ async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     """معالج مستقل لزر القائمة الرئيسية - يعمل من أي رسالة"""
     query = update.callback_query
     await query.answer()
-    context.user_data.clear()
+    context.user_data.pop("analyze_platform", None)
+    context.user_data.pop("compare_platform_1", None)
+    context.user_data.pop("compare_platform_2", None)
+    context.user_data.pop("compare_username_1", None)
     try:
         await query.edit_message_text(
-            WELCOME_TEXT,
+            t(context, "welcome"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_main_keyboard(context),
         )
     except Exception:
-        # إذا فشل التعديل (مثلاً رسالة فيديو)، أرسل رسالة جديدة
         await query.message.reply_text(
-            WELCOME_TEXT,
+            t(context, "welcome"),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_main_keyboard(),
+            reply_markup=get_main_keyboard(context),
+        )
+    return MAIN_MENU
+
+
+async def switch_lang_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """معالج مستقل لتبديل اللغة - يعمل من أي رسالة"""
+    query = update.callback_query
+    await query.answer()
+    current = context.user_data.get("lang", "ar")
+    context.user_data["lang"] = "en" if current == "ar" else "ar"
+    try:
+        await query.edit_message_text(
+            t(context, "welcome"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_main_keyboard(context),
+        )
+    except Exception:
+        await query.message.reply_text(
+            t(context, "welcome"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_main_keyboard(context),
         )
     return MAIN_MENU
 
@@ -1056,16 +1163,14 @@ async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 # ===================== معالج الرسائل غير المعروفة =====================
 
 async def unknown_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """معالجة الرسائل غير المتوقعة"""
     await update.message.reply_text(
-        "🤔 لم أفهم طلبك. استخدم القائمة الرئيسية:",
-        reply_markup=get_main_keyboard(),
+        t(context, "unknown_msg"),
+        reply_markup=get_main_keyboard(context),
     )
     return MAIN_MENU
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """معالج الأخطاء العامة"""
     logger.error(f"خطأ: {context.error}")
 
 
@@ -1079,7 +1184,6 @@ def main():
 
     app = Application.builder().token(BOT_TOKEN).build()
 
-    # ConversationHandler الرئيسي
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -1121,8 +1225,9 @@ def main():
     )
 
     app.add_handler(conv_handler)
-    # معالج مستقل لزر القائمة الرئيسية (يعمل من أي رسالة خارج الـ ConversationHandler)
+    # معالجات مستقلة تعمل من أي رسالة
     app.add_handler(CallbackQueryHandler(back_to_main_handler, pattern="^back_main$"))
+    app.add_handler(CallbackQueryHandler(switch_lang_handler, pattern="^switch_lang$"))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler("stats", stats_command))
     app.add_handler(CommandHandler("broadcast", broadcast_command))
