@@ -1,5 +1,5 @@
 """
-دليل الحذف — خطوات حذف الحسابات من المنصات المختلفة
+دليل الحذف — خطوات حذف الحسابات + ماذا ستفقد وماذا ستحتفظ
 """
 
 DELETE_GUIDES = {
@@ -8,49 +8,71 @@ DELETE_GUIDES = {
         "name": "Instagram",
         "url": "https://www.instagram.com/accounts/remove/request/permanent/",
         "ar": {
-            "title": "📸 حذف حساب Instagram",
-            "steps": (
-                "📸 *حذف حساب Instagram نهائياً*\n\n"
-                "⚠️ *تنبيه:* الحذف نهائي ولا يمكن التراجع عنه بعد 30 يوماً.\n\n"
+            "what_you_lose": (
+                "📸 *Instagram — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "📱 *من الهاتف (التطبيق):*\n\n"
-                "1️⃣ افتح التطبيق واضغط على صورتك الشخصية\n"
-                "2️⃣ اضغط على ☰ (القائمة) ثم ⚙️ *الإعدادات*\n"
-                "3️⃣ اضغط على *الحساب*\n"
-                "4️⃣ انزل للأسفل واضغط *حذف الحساب*\n"
-                "5️⃣ اختر *حذف الحساب* مجدداً\n"
-                "6️⃣ اختر سبب الحذف ثم أدخل كلمة المرور\n"
-                "7️⃣ اضغط *حذف @username*\n\n"
-                "🌐 *من الموقع:*\n\n"
-                "1️⃣ سجّل الدخول على instagram.com\n"
-                "2️⃣ اذهب لرابط الحذف المباشر 👇\n"
-                "3️⃣ اختر سبب الحذف وأدخل كلمة المرور\n"
-                "4️⃣ اضغط *حذف الحساب*\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• جميع صورك ومقاطع الفيديو\n"
+                "• قصصك وReels المنشورة\n"
+                "• قائمة متابعيك ومن تتابعهم\n"
+                "• رسائلك الخاصة (DMs)\n"
+                "• تعليقاتك وإعجاباتك\n"
+                "• اسم المستخدم (يصبح متاحاً للآخرين)\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• الصور التي نزّلتها على هاتفك\n"
+                "• أي محتوى شاركته على منصات أخرى\n"
+                "• بياناتك إذا نزّلتها قبل الحذف\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• لديك *30 يوماً* للتراجع بتسجيل الدخول\n"
+                "• بعد 30 يوماً الحذف نهائي ولا رجعة\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* يمكنك تعطيل الحساب مؤقتاً بدلاً من الحذف النهائي."
+                "💡 *نصيحة:* نزّل بياناتك من الإعدادات ← الخصوصية ← تنزيل البيانات قبل الحذف."
+            ),
+            "steps": (
+                "📸 *خطوات حذف حساب Instagram*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "📱 *من التطبيق:*\n\n"
+                "1️⃣ افتح التطبيق واضغط على صورتك الشخصية\n"
+                "2️⃣ اضغط على ☰ ثم ⚙️ *الإعدادات*\n"
+                "3️⃣ اضغط على *الحساب*\n"
+                "4️⃣ انزل واضغط *حذف الحساب*\n"
+                "5️⃣ اختر سبب الحذف وأدخل كلمة المرور\n"
+                "6️⃣ اضغط *حذف @username*\n\n"
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "📸 Delete Instagram Account",
+            "what_you_lose": (
+                "📸 *Instagram — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• All your photos and videos\n"
+                "• Stories and published Reels\n"
+                "• Your followers and following list\n"
+                "• Direct messages (DMs)\n"
+                "• Your comments and likes\n"
+                "• Your username (becomes available to others)\n\n"
+                "✅ *You will keep:*\n"
+                "• Photos already downloaded to your device\n"
+                "• Content shared on other platforms\n"
+                "• Your data if downloaded before deletion\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• You have *30 days* to cancel by logging in\n"
+                "• After 30 days, deletion is permanent\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Download your data from Settings → Privacy → Download Your Data before deleting."
+            ),
             "steps": (
-                "📸 *Delete Instagram Account Permanently*\n\n"
-                "⚠️ *Warning:* Deletion is permanent and cannot be undone after 30 days.\n\n"
+                "📸 *Steps to Delete Instagram Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *From the App:*\n\n"
                 "1️⃣ Open the app and tap your profile picture\n"
-                "2️⃣ Tap ☰ (Menu) then ⚙️ *Settings*\n"
+                "2️⃣ Tap ☰ then ⚙️ *Settings*\n"
                 "3️⃣ Tap *Account*\n"
                 "4️⃣ Scroll down and tap *Delete Account*\n"
-                "5️⃣ Tap *Delete Account* again\n"
-                "6️⃣ Choose a reason and enter your password\n"
-                "7️⃣ Tap *Delete @username*\n\n"
-                "🌐 *From the Website:*\n\n"
-                "1️⃣ Log in to instagram.com\n"
-                "2️⃣ Go to the direct deletion link 👇\n"
-                "3️⃣ Choose a reason and enter your password\n"
-                "4️⃣ Tap *Delete Account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* You can temporarily disable your account instead of permanent deletion."
+                "5️⃣ Choose a reason and enter your password\n"
+                "6️⃣ Tap *Delete @username*\n\n"
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },
@@ -59,37 +81,65 @@ DELETE_GUIDES = {
         "name": "TikTok",
         "url": "https://www.tiktok.com/setting",
         "ar": {
-            "title": "🎵 حذف حساب TikTok",
+            "what_you_lose": (
+                "🎵 *TikTok — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• جميع مقاطع الفيديو التي نشرتها\n"
+                "• قائمة متابعيك ومن تتابعهم\n"
+                "• الإعجابات والتعليقات والرسائل\n"
+                "• العملات والهدايا الافتراضية\n"
+                "• اسم المستخدم\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• الفيديوهات التي حفظتها على هاتفك\n"
+                "• أي محتوى شاركته خارج TikTok\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• لديك *30 يوماً* للتراجع بتسجيل الدخول\n"
+                "• بعدها الحذف نهائي\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* احفظ فيديوهاتك المهمة على هاتفك قبل الحذف."
+            ),
             "steps": (
-                "🎵 *حذف حساب TikTok نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُحذف جميع مقاطعك وإعجاباتك ومتابعيك نهائياً.\n\n"
+                "🎵 *خطوات حذف حساب TikTok*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *من التطبيق:*\n\n"
-                "1️⃣ افتح التطبيق واضغط على *أنا* (الملف الشخصي)\n"
-                "2️⃣ اضغط على ☰ ثم *الإعدادات والخصوصية*\n"
-                "3️⃣ اضغط على *الحساب*\n"
-                "4️⃣ اضغط *حذف الحساب*\n"
-                "5️⃣ اضغط *متابعة* ثم أدخل رمز التحقق\n"
-                "6️⃣ اضغط *حذف الحساب* للتأكيد\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* الحساب يُحذف بعد 30 يوماً من الطلب. يمكنك التراجع خلال هذه المدة بتسجيل الدخول."
+                "1️⃣ افتح التطبيق واضغط على *أنا*\n"
+                "2️⃣ اضغط ☰ ثم *الإعدادات والخصوصية*\n"
+                "3️⃣ اضغط *الحساب* ثم *حذف الحساب*\n"
+                "4️⃣ اضغط *متابعة* وأدخل رمز التحقق\n"
+                "5️⃣ اضغط *حذف الحساب* للتأكيد\n\n"
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "🎵 Delete TikTok Account",
+            "what_you_lose": (
+                "🎵 *TikTok — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• All your published videos\n"
+                "• Your followers and following list\n"
+                "• Likes, comments, and messages\n"
+                "• Coins and virtual gifts\n"
+                "• Your username\n\n"
+                "✅ *You will keep:*\n"
+                "• Videos already saved to your device\n"
+                "• Content shared outside TikTok\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• You have *30 days* to cancel by logging in\n"
+                "• After that, deletion is permanent\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Save your important videos to your device before deleting."
+            ),
             "steps": (
-                "🎵 *Delete TikTok Account Permanently*\n\n"
-                "⚠️ *Warning:* All your videos, likes, and followers will be permanently deleted.\n\n"
+                "🎵 *Steps to Delete TikTok Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *From the App:*\n\n"
-                "1️⃣ Open the app and tap *Me* (Profile)\n"
+                "1️⃣ Open the app and tap *Me*\n"
                 "2️⃣ Tap ☰ then *Settings and Privacy*\n"
-                "3️⃣ Tap *Account*\n"
-                "4️⃣ Tap *Delete Account*\n"
-                "5️⃣ Tap *Continue* and enter the verification code\n"
-                "6️⃣ Tap *Delete Account* to confirm\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* The account is deleted 30 days after the request. You can cancel by logging in during this period."
+                "3️⃣ Tap *Account* then *Delete Account*\n"
+                "4️⃣ Tap *Continue* and enter the verification code\n"
+                "5️⃣ Tap *Delete Account* to confirm\n\n"
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },
@@ -98,35 +148,63 @@ DELETE_GUIDES = {
         "name": "Twitter / X",
         "url": "https://twitter.com/settings/deactivate",
         "ar": {
-            "title": "🐦 حذف حساب Twitter / X",
+            "what_you_lose": (
+                "🐦 *Twitter / X — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً (بعد 30 يوماً):*\n"
+                "• جميع تغريداتك وإعادة التغريد\n"
+                "• قائمة متابعيك ومن تتابعهم\n"
+                "• الرسائل المباشرة\n"
+                "• القوائم والإشارات المرجعية\n"
+                "• اسم المستخدم\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• أي تغريدات شاركتها أو اقتبستها\n"
+                "• الصور المحفوظة على هاتفك\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• *30 يوماً* — تسجيل الدخول يُعيد الحساب فوراً\n"
+                "• بعد 30 يوماً الحذف نهائي\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* يمكنك تنزيل أرشيف تغريداتك من الإعدادات قبل الحذف."
+            ),
             "steps": (
-                "🐦 *حذف حساب Twitter / X نهائياً*\n\n"
-                "⚠️ *تنبيه:* الحساب يُوقَّف أولاً لمدة 30 يوماً ثم يُحذف نهائياً.\n\n"
+                "🐦 *خطوات حذف حساب Twitter / X*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *من التطبيق أو الموقع:*\n\n"
                 "1️⃣ اذهب إلى *الإعدادات والدعم* ← *الإعدادات والخصوصية*\n"
-                "2️⃣ اضغط على *حسابك*\n"
-                "3️⃣ اضغط *إلغاء تنشيط حسابك*\n"
-                "4️⃣ اقرأ المعلومات ثم اضغط *إلغاء التنشيط*\n"
-                "5️⃣ أدخل كلمة المرور وأكّد\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* بعد 30 يوماً من إلغاء التنشيط يُحذف الحساب تلقائياً. إذا سجّلت الدخول خلال هذه المدة سيُعاد تفعيل الحساب."
+                "2️⃣ اضغط *حسابك* ثم *إلغاء تنشيط حسابك*\n"
+                "3️⃣ اقرأ المعلومات واضغط *إلغاء التنشيط*\n"
+                "4️⃣ أدخل كلمة المرور وأكّد\n\n"
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "🐦 Delete Twitter / X Account",
+            "what_you_lose": (
+                "🐦 *Twitter / X — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose (after 30 days):*\n"
+                "• All your tweets and retweets\n"
+                "• Your followers and following list\n"
+                "• Direct messages\n"
+                "• Lists and bookmarks\n"
+                "• Your username\n\n"
+                "✅ *You will keep:*\n"
+                "• Tweets shared or quoted by others\n"
+                "• Photos saved to your device\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• *30 days* — logging in immediately restores the account\n"
+                "• After 30 days, deletion is permanent\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Download your tweet archive from Settings before deleting."
+            ),
             "steps": (
-                "🐦 *Delete Twitter / X Account Permanently*\n\n"
-                "⚠️ *Warning:* The account is first deactivated for 30 days, then permanently deleted.\n\n"
+                "🐦 *Steps to Delete Twitter / X Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *From the App or Website:*\n\n"
                 "1️⃣ Go to *Settings and Support* → *Settings and Privacy*\n"
-                "2️⃣ Tap *Your Account*\n"
-                "3️⃣ Tap *Deactivate your account*\n"
-                "4️⃣ Read the info then tap *Deactivate*\n"
-                "5️⃣ Enter your password and confirm\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* After 30 days of deactivation, the account is automatically deleted. Logging in during this period will reactivate it."
+                "2️⃣ Tap *Your Account* then *Deactivate your account*\n"
+                "3️⃣ Read the info and tap *Deactivate*\n"
+                "4️⃣ Enter your password and confirm\n\n"
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },
@@ -135,33 +213,59 @@ DELETE_GUIDES = {
         "name": "Snapchat",
         "url": "https://accounts.snapchat.com/accounts/delete_account",
         "ar": {
-            "title": "👻 حذف حساب Snapchat",
+            "what_you_lose": (
+                "👻 *Snapchat — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• جميع الذكريات (Memories) المحفوظة في السحابة\n"
+                "• قائمة أصدقائك\n"
+                "• الرسائل والمحادثات\n"
+                "• Streaks مع أصدقائك\n"
+                "• اسم المستخدم والـ Snapcode\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• الذكريات التي حفظتها على هاتفك\n"
+                "• الصور في Camera Roll\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• *30 يوماً* — تسجيل الدخول يُعيد الحساب\n"
+                "• بعدها الحذف نهائي\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* احفظ ذكرياتك على هاتفك من داخل التطبيق قبل الحذف."
+            ),
             "steps": (
-                "👻 *حذف حساب Snapchat نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُفقد جميع الذكريات والبيانات المحفوظة.\n\n"
+                "👻 *خطوات حذف حساب Snapchat*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *من الموقع فقط (لا يمكن من التطبيق):*\n\n"
                 "1️⃣ افتح رابط الحذف المباشر 👇\n"
                 "2️⃣ أدخل اسم المستخدم وكلمة المرور\n"
-                "3️⃣ اضغط *متابعة*\n"
-                "4️⃣ اضغط *حذف حسابي* للتأكيد\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* الحساب يُعطَّل لمدة 30 يوماً قبل الحذف النهائي. تسجيل الدخول خلال هذه المدة يُلغي الحذف."
+                "3️⃣ اضغط *متابعة* ثم *حذف حسابي*"
             ),
         },
         "en": {
-            "title": "👻 Delete Snapchat Account",
+            "what_you_lose": (
+                "👻 *Snapchat — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• All Memories saved in the cloud\n"
+                "• Your friends list\n"
+                "• Messages and conversations\n"
+                "• Streaks with friends\n"
+                "• Your username and Snapcode\n\n"
+                "✅ *You will keep:*\n"
+                "• Memories saved to your device\n"
+                "• Photos in your Camera Roll\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• *30 days* — logging in restores the account\n"
+                "• After that, deletion is permanent\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Save your Memories to your device from within the app before deleting."
+            ),
             "steps": (
-                "👻 *Delete Snapchat Account Permanently*\n\n"
-                "⚠️ *Warning:* All your memories and saved data will be lost.\n\n"
+                "👻 *Steps to Delete Snapchat Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *From the Website Only (not possible from the app):*\n\n"
                 "1️⃣ Open the direct deletion link 👇\n"
                 "2️⃣ Enter your username and password\n"
-                "3️⃣ Tap *Continue*\n"
-                "4️⃣ Tap *Delete My Account* to confirm\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* The account is deactivated for 30 days before permanent deletion. Logging in during this period cancels the deletion."
+                "3️⃣ Tap *Continue* then *Delete My Account*"
             ),
         },
     },
@@ -170,37 +274,69 @@ DELETE_GUIDES = {
         "name": "Facebook",
         "url": "https://www.facebook.com/help/delete_account",
         "ar": {
-            "title": "📘 حذف حساب Facebook",
+            "what_you_lose": (
+                "📘 *Facebook — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• جميع منشوراتك وصورك ومقاطع الفيديو\n"
+                "• قائمة أصدقائك ومجموعاتك\n"
+                "• الرسائل والمحادثات\n"
+                "• الصفحات التي تديرها (إذا لم يكن هناك مدير آخر)\n"
+                "• سجل نشاطك وإعجاباتك\n"
+                "• تسجيل الدخول عبر Facebook في التطبيقات الأخرى\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• الصور المحفوظة على هاتفك\n"
+                "• بياناتك إذا نزّلتها قبل الحذف\n"
+                "• الرسائل التي أرسلتها للآخرين (تبقى عندهم)\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• *30 يوماً* للتراجع بتسجيل الدخول\n"
+                "• بعدها يُحذف الحساب خلال *90 يوماً* إضافية\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* نزّل بياناتك من الإعدادات ← معلوماتك على Facebook ← تنزيل معلوماتك."
+            ),
             "steps": (
-                "📘 *حذف حساب Facebook نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُحذف جميع صورك ومنشوراتك وبياناتك نهائياً.\n\n"
+                "📘 *خطوات حذف حساب Facebook*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *من التطبيق:*\n\n"
-                "1️⃣ اضغط على ☰ ثم *الإعدادات والخصوصية* ← *الإعدادات*\n"
+                "1️⃣ اضغط ☰ ثم *الإعدادات والخصوصية* ← *الإعدادات*\n"
                 "2️⃣ اضغط *معلومات الحساب*\n"
                 "3️⃣ اضغط *إلغاء تنشيط الحساب وحذفه*\n"
-                "4️⃣ اختر *حذف الحساب* ثم اضغط *متابعة*\n"
-                "5️⃣ اضغط *حذف الحساب* وأدخل كلمة المرور\n"
-                "6️⃣ اضغط *متابعة* ثم *حذف الحساب*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* لديك 30 يوماً للتراجع. بعدها يُحذف الحساب نهائياً خلال 90 يوماً."
+                "4️⃣ اختر *حذف الحساب* ثم *متابعة*\n"
+                "5️⃣ أدخل كلمة المرور واضغط *حذف الحساب*\n\n"
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "📘 Delete Facebook Account",
+            "what_you_lose": (
+                "📘 *Facebook — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• All posts, photos, and videos\n"
+                "• Friends list and groups\n"
+                "• Messages and conversations\n"
+                "• Pages you manage (if no other admin)\n"
+                "• Activity history and likes\n"
+                "• Facebook login for other apps\n\n"
+                "✅ *You will keep:*\n"
+                "• Photos saved to your device\n"
+                "• Your data if downloaded before deletion\n"
+                "• Messages you sent to others (they keep them)\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• *30 days* to cancel by logging in\n"
+                "• After that, account is deleted within *90 more days*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Download your data from Settings → Your Facebook Information → Download Your Information."
+            ),
             "steps": (
-                "📘 *Delete Facebook Account Permanently*\n\n"
-                "⚠️ *Warning:* All your photos, posts, and data will be permanently deleted.\n\n"
+                "📘 *Steps to Delete Facebook Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "📱 *From the App:*\n\n"
                 "1️⃣ Tap ☰ then *Settings & Privacy* → *Settings*\n"
                 "2️⃣ Tap *Account Ownership and Control*\n"
                 "3️⃣ Tap *Deactivation and Deletion*\n"
-                "4️⃣ Choose *Delete Account* then tap *Continue*\n"
-                "5️⃣ Tap *Delete Account* and enter your password\n"
-                "6️⃣ Tap *Continue* then *Delete Account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* You have 30 days to cancel. After that, the account is permanently deleted within 90 days."
+                "4️⃣ Choose *Delete Account* then *Continue*\n"
+                "5️⃣ Enter your password and tap *Delete Account*\n\n"
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },
@@ -209,37 +345,65 @@ DELETE_GUIDES = {
         "name": "YouTube",
         "url": "https://myaccount.google.com/deleteaccount",
         "ar": {
-            "title": "▶️ حذف قناة YouTube",
+            "what_you_lose": (
+                "▶️ *YouTube — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً (عند حذف القناة):*\n"
+                "• جميع مقاطع الفيديو المرفوعة\n"
+                "• قوائم التشغيل والاشتراكات\n"
+                "• التعليقات والإعجابات\n"
+                "• إيرادات AdSense المعلّقة (إذا وجدت)\n"
+                "• اسم القناة والمشتركين\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• حساب Google (الحذف للقناة فقط)\n"
+                "• Gmail وGoogle Drive وباقي خدمات Google\n"
+                "• الفيديوهات المحفوظة على هاتفك\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• الحذف *فوري* ولا يمكن التراجع عنه\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* نزّل فيديوهاتك من YouTube Studio قبل الحذف."
+            ),
             "steps": (
-                "▶️ *حذف قناة YouTube نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُحذف جميع مقاطعك وتعليقاتك وبياناتك.\n\n"
+                "▶️ *خطوات حذف قناة YouTube*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *من الموقع:*\n\n"
                 "1️⃣ افتح YouTube وسجّل الدخول\n"
-                "2️⃣ اضغط على صورتك ثم *YouTube Studio*\n"
-                "3️⃣ اضغط على *الإعدادات* من القائمة اليسرى\n"
-                "4️⃣ اضغط *القناة* ثم *المحتوى المتقدم*\n"
-                "5️⃣ اضغط *حذف القناة*\n"
-                "6️⃣ أدخل كلمة مرور Google وأكّد\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* حذف القناة لا يحذف حساب Google. لحذف حساب Google كاملاً اذهب للرابط 👇"
+                "2️⃣ اضغط صورتك ثم *YouTube Studio*\n"
+                "3️⃣ اضغط *الإعدادات* ← *القناة* ← *المحتوى المتقدم*\n"
+                "4️⃣ اضغط *حذف القناة*\n"
+                "5️⃣ أدخل كلمة مرور Google وأكّد\n\n"
+                "🌐 *لحذف حساب Google كاملاً استخدم الرابط 👇*"
             ),
         },
         "en": {
-            "title": "▶️ Delete YouTube Channel",
+            "what_you_lose": (
+                "▶️ *YouTube — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose (when deleting the channel):*\n"
+                "• All uploaded videos\n"
+                "• Playlists and subscriptions\n"
+                "• Comments and likes\n"
+                "• Pending AdSense revenue (if any)\n"
+                "• Channel name and subscribers\n\n"
+                "✅ *You will keep:*\n"
+                "• Your Google account (only the channel is deleted)\n"
+                "• Gmail, Google Drive, and other Google services\n"
+                "• Videos saved to your device\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• Deletion is *immediate* and cannot be undone\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Download your videos from YouTube Studio before deleting."
+            ),
             "steps": (
-                "▶️ *Delete YouTube Channel Permanently*\n\n"
-                "⚠️ *Warning:* All your videos, comments, and data will be deleted.\n\n"
+                "▶️ *Steps to Delete YouTube Channel*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *From the Website:*\n\n"
                 "1️⃣ Open YouTube and sign in\n"
                 "2️⃣ Click your profile picture then *YouTube Studio*\n"
-                "3️⃣ Click *Settings* from the left menu\n"
-                "4️⃣ Click *Channel* then *Advanced Settings*\n"
-                "5️⃣ Click *Delete Channel*\n"
-                "6️⃣ Enter your Google password and confirm\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* Deleting the channel does not delete your Google account. To delete your Google account, use the link 👇"
+                "3️⃣ Click *Settings* → *Channel* → *Advanced Settings*\n"
+                "4️⃣ Click *Delete Channel*\n"
+                "5️⃣ Enter your Google password and confirm\n\n"
+                "🌐 *To delete your full Google account, use the link 👇*"
             ),
         },
     },
@@ -248,43 +412,61 @@ DELETE_GUIDES = {
         "name": "Telegram",
         "url": "https://my.telegram.org/auth",
         "ar": {
-            "title": "✈️ حذف حساب Telegram",
-            "steps": (
-                "✈️ *حذف حساب Telegram نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُحذف جميع رسائلك ومجموعاتك وقنواتك.\n\n"
+            "what_you_lose": (
+                "✈️ *Telegram — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "🌐 *الطريقة الأولى — من الموقع:*\n\n"
-                "1️⃣ افتح my.telegram.org\n"
-                "2️⃣ أدخل رقم هاتفك واضغط *التالي*\n"
-                "3️⃣ أدخل رمز التحقق المُرسَل لك\n"
-                "4️⃣ اضغط *حذف الحساب*\n"
-                "5️⃣ أكّد الحذف\n\n"
-                "📱 *الطريقة الثانية — من التطبيق:*\n\n"
-                "1️⃣ اذهب إلى *الإعدادات* ← *الخصوصية والأمان*\n"
-                "2️⃣ اضغط *حذف حسابي تلقائياً*\n"
-                "3️⃣ اختر *بعد شهر* وانتظر\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• جميع رسائلك في المحادثات الخاصة\n"
+                "• القنوات والمجموعات التي أنشأتها\n"
+                "• الملفات والصور المرفوعة على Telegram\n"
+                "• جهات الاتصال المزامَنة\n"
+                "• اسم المستخدم (@username)\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• الرسائل التي أرسلتها للآخرين (تبقى عندهم)\n"
+                "• الملفات المحفوظة على هاتفك\n"
+                "• المحادثات في المجموعات (تبقى للآخرين)\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• الحذف *فوري ونهائي* لا يمكن التراجع عنه\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* الحذف فوري ونهائي ولا يمكن التراجع عنه."
+                "💡 *نصيحة:* صدّر محادثاتك المهمة قبل الحذف من خيار Export Chat."
+            ),
+            "steps": (
+                "✈️ *خطوات حذف حساب Telegram*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "🌐 *من الموقع:*\n\n"
+                "1️⃣ افتح my.telegram.org\n"
+                "2️⃣ أدخل رقم هاتفك ورمز التحقق\n"
+                "3️⃣ اضغط *حذف الحساب* وأكّد\n\n"
+                "🌐 *استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "✈️ Delete Telegram Account",
-            "steps": (
-                "✈️ *Delete Telegram Account Permanently*\n\n"
-                "⚠️ *Warning:* All your messages, groups, and channels will be deleted.\n\n"
+            "what_you_lose": (
+                "✈️ *Telegram — What You Lose & What You Keep*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-                "🌐 *Method 1 — From the Website:*\n\n"
-                "1️⃣ Open my.telegram.org\n"
-                "2️⃣ Enter your phone number and tap *Next*\n"
-                "3️⃣ Enter the verification code sent to you\n"
-                "4️⃣ Tap *Delete Account*\n"
-                "5️⃣ Confirm the deletion\n\n"
-                "📱 *Method 2 — From the App:*\n\n"
-                "1️⃣ Go to *Settings* → *Privacy and Security*\n"
-                "2️⃣ Tap *Delete My Account Automatically*\n"
-                "3️⃣ Choose *After 1 month* and wait\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• All messages in private chats\n"
+                "• Channels and groups you created\n"
+                "• Files and photos uploaded to Telegram\n"
+                "• Synced contacts\n"
+                "• Your username (@username)\n\n"
+                "✅ *You will keep:*\n"
+                "• Messages you sent to others (they keep them)\n"
+                "• Files saved to your device\n"
+                "• Group messages (remain for others)\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• Deletion is *immediate and permanent*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* Deletion is immediate and permanent and cannot be undone."
+                "💡 *Tip:* Export important chats before deleting using the Export Chat option."
+            ),
+            "steps": (
+                "✈️ *Steps to Delete Telegram Account*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "🌐 *From the Website:*\n\n"
+                "1️⃣ Open my.telegram.org\n"
+                "2️⃣ Enter your phone number and verification code\n"
+                "3️⃣ Click *Delete Account* and confirm\n\n"
+                "🌐 *Use the direct link 👇*"
             ),
         },
     },
@@ -293,35 +475,63 @@ DELETE_GUIDES = {
         "name": "LinkedIn",
         "url": "https://www.linkedin.com/psettings/account",
         "ar": {
-            "title": "💼 حذف حساب LinkedIn",
+            "what_you_lose": (
+                "💼 *LinkedIn — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• ملفك الشخصي المهني بالكامل\n"
+                "• جميع اتصالاتك (Connections)\n"
+                "• التوصيات التي حصلت عليها وكتبتها\n"
+                "• الرسائل والمحادثات\n"
+                "• المنشورات والمقالات\n"
+                "• شهادات LinkedIn Learning\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• بياناتك إذا نزّلتها قبل الحذف\n"
+                "• الشهادات الخارجية المرتبطة بحسابك\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• الحذف *فوري* ولا يمكن التراجع عنه\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* نزّل بياناتك من الإعدادات ← الخصوصية ← تنزيل بياناتك."
+            ),
             "steps": (
-                "💼 *حذف حساب LinkedIn نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُفقد جميع اتصالاتك وتوصياتك وسجل عملك.\n\n"
+                "💼 *خطوات حذف حساب LinkedIn*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *من الموقع أو التطبيق:*\n\n"
-                "1️⃣ اضغط على صورتك ثم *الإعدادات والخصوصية*\n"
-                "2️⃣ اضغط على *إدارة الحساب*\n"
-                "3️⃣ اضغط *إغلاق الحساب*\n"
-                "4️⃣ اختر سبب الإغلاق ثم اضغط *التالي*\n"
-                "5️⃣ أدخل كلمة المرور واضغط *إغلاق الحساب*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* يمكنك تنزيل بياناتك قبل الحذف من نفس قسم الإعدادات."
+                "1️⃣ اضغط صورتك ثم *الإعدادات والخصوصية*\n"
+                "2️⃣ اضغط *إدارة الحساب* ثم *إغلاق الحساب*\n"
+                "3️⃣ اختر سبب الإغلاق واضغط *التالي*\n"
+                "4️⃣ أدخل كلمة المرور واضغط *إغلاق الحساب*\n\n"
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "💼 Delete LinkedIn Account",
+            "what_you_lose": (
+                "💼 *LinkedIn — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• Your entire professional profile\n"
+                "• All your connections\n"
+                "• Recommendations received and written\n"
+                "• Messages and conversations\n"
+                "• Posts and articles\n"
+                "• LinkedIn Learning certificates\n\n"
+                "✅ *You will keep:*\n"
+                "• Your data if downloaded before deletion\n"
+                "• External certifications linked to your account\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• Deletion is *immediate* and cannot be undone\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Download your data from Settings → Privacy → Get a copy of your data."
+            ),
             "steps": (
-                "💼 *Delete LinkedIn Account Permanently*\n\n"
-                "⚠️ *Warning:* You will lose all your connections, recommendations, and work history.\n\n"
+                "💼 *Steps to Delete LinkedIn Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *From the Website or App:*\n\n"
                 "1️⃣ Click your profile picture then *Settings & Privacy*\n"
-                "2️⃣ Click *Account Management*\n"
-                "3️⃣ Click *Close Account*\n"
-                "4️⃣ Choose a reason and click *Next*\n"
-                "5️⃣ Enter your password and click *Close Account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* You can download your data before deletion from the same settings section."
+                "2️⃣ Click *Account Management* then *Close Account*\n"
+                "3️⃣ Choose a reason and click *Next*\n"
+                "4️⃣ Enter your password and click *Close Account*\n\n"
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },
@@ -330,26 +540,57 @@ DELETE_GUIDES = {
         "name": "Reddit",
         "url": "https://www.reddit.com/settings",
         "ar": {
-            "title": "🤖 حذف حساب Reddit",
+            "what_you_lose": (
+                "🤖 *Reddit — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• اسم المستخدم والملف الشخصي\n"
+                "• Karma المكتسبة\n"
+                "• الرسائل الخاصة\n"
+                "• المجتمعات (Subreddits) التي تديرها\n\n"
+                "⚠️ *لن تُحذف تلقائياً:*\n"
+                "• منشوراتك وتعليقاتك تبقى موجودة\n"
+                "  (تظهر باسم [deleted] لكن المحتوى يبقى)\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• لا شيء يُحتفظ به — الحساب يُمحى كلياً\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• الحذف *فوري* ولا يمكن التراجع عنه\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* احذف منشوراتك وتعليقاتك يدوياً قبل حذف الحساب إذا أردت إزالة المحتوى."
+            ),
             "steps": (
-                "🤖 *حذف حساب Reddit نهائياً*\n\n"
-                "⚠️ *تنبيه:* اسم المستخدم يختفي لكن المنشورات قد تبقى.\n\n"
+                "🤖 *خطوات حذف حساب Reddit*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *من الموقع:*\n\n"
-                "1️⃣ اذهب إلى *User Settings* (إعدادات المستخدم)\n"
-                "2️⃣ انزل للأسفل حتى *Delete Account*\n"
+                "1️⃣ اذهب إلى *User Settings*\n"
+                "2️⃣ انزل لـ *Delete Account*\n"
                 "3️⃣ أدخل اسم المستخدم وكلمة المرور\n"
                 "4️⃣ ضع علامة على مربع التأكيد\n"
                 "5️⃣ اضغط *Delete Account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* احذف منشوراتك يدوياً قبل حذف الحساب إذا أردت إزالتها كلياً."
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "🤖 Delete Reddit Account",
+            "what_you_lose": (
+                "🤖 *Reddit — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• Your username and profile\n"
+                "• All earned Karma\n"
+                "• Private messages\n"
+                "• Subreddits you moderate\n\n"
+                "⚠️ *Not automatically deleted:*\n"
+                "• Your posts and comments remain\n"
+                "  (shown as [deleted] but content stays)\n\n"
+                "✅ *You will keep:*\n"
+                "• Nothing — the account is fully wiped\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• Deletion is *immediate* and cannot be undone\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Manually delete your posts and comments before deleting the account to remove content."
+            ),
             "steps": (
-                "🤖 *Delete Reddit Account Permanently*\n\n"
-                "⚠️ *Warning:* Your username disappears but posts may remain.\n\n"
+                "🤖 *Steps to Delete Reddit Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *From the Website:*\n\n"
                 "1️⃣ Go to *User Settings*\n"
@@ -357,8 +598,7 @@ DELETE_GUIDES = {
                 "3️⃣ Enter your username and password\n"
                 "4️⃣ Check the confirmation box\n"
                 "5️⃣ Click *Delete Account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* Delete your posts manually before deleting the account if you want to remove them completely."
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },
@@ -367,35 +607,69 @@ DELETE_GUIDES = {
         "name": "GitHub",
         "url": "https://github.com/settings/admin",
         "ar": {
-            "title": "🐙 حذف حساب GitHub",
+            "what_you_lose": (
+                "🐙 *GitHub — ماذا ستفقد وماذا ستحتفظ؟*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *ستفقد نهائياً:*\n"
+                "• جميع المستودعات الخاصة (Private Repos)\n"
+                "• المستودعات العامة التي لا يملكها أحد غيرك\n"
+                "• Gists الخاصة\n"
+                "• Issues وPull Requests\n"
+                "• Stars وFollowers\n"
+                "• حزم GitHub Packages\n\n"
+                "⚠️ *لن تُحذف تلقائياً:*\n"
+                "• المستودعات التي Fork منها الآخرون (تبقى عندهم)\n"
+                "• المساهمات في مستودعات الآخرين\n\n"
+                "✅ *ستحتفظ بـ:*\n"
+                "• الكود إذا نزّلته محلياً\n\n"
+                "⏳ *مهلة التراجع:*\n"
+                "• الحذف *فوري* ولا يمكن التراجع عنه\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *نصيحة:* انقل مستودعاتك لمنظمة أو مستخدم آخر قبل الحذف."
+            ),
             "steps": (
-                "🐙 *حذف حساب GitHub نهائياً*\n\n"
-                "⚠️ *تنبيه:* ستُحذف جميع مستودعاتك الخاصة والعامة نهائياً.\n\n"
+                "🐙 *خطوات حذف حساب GitHub*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *من الموقع:*\n\n"
-                "1️⃣ اذهب إلى *Settings* (الإعدادات)\n"
-                "2️⃣ انزل للأسفل حتى قسم *Danger Zone*\n"
+                "1️⃣ اذهب إلى *Settings*\n"
+                "2️⃣ انزل لـ *Danger Zone*\n"
                 "3️⃣ اضغط *Delete your account*\n"
-                "4️⃣ اقرأ التحذيرات وأدخل اسم المستخدم للتأكيد\n"
+                "4️⃣ أدخل اسم المستخدم للتأكيد\n"
                 "5️⃣ اضغط *I understand, delete this account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *ملاحظة:* انقل أو احتفظ بنسخة من مستودعاتك المهمة قبل الحذف."
+                "🌐 *أو استخدم الرابط المباشر 👇*"
             ),
         },
         "en": {
-            "title": "🐙 Delete GitHub Account",
+            "what_you_lose": (
+                "🐙 *GitHub — What You Lose & What You Keep*\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                "❌ *You will permanently lose:*\n"
+                "• All private repositories\n"
+                "• Public repos owned only by you\n"
+                "• Private Gists\n"
+                "• Issues and Pull Requests\n"
+                "• Stars and Followers\n"
+                "• GitHub Packages\n\n"
+                "⚠️ *Not automatically deleted:*\n"
+                "• Repos forked by others (they keep them)\n"
+                "• Contributions to others' repositories\n\n"
+                "✅ *You will keep:*\n"
+                "• Code if downloaded locally\n\n"
+                "⏳ *Cancellation window:*\n"
+                "• Deletion is *immediate* and cannot be undone\n\n"
+                "━━━━━━━━━━━━━━━━━━━━━━━\n"
+                "💡 *Tip:* Transfer your repositories to an organization or another user before deleting."
+            ),
             "steps": (
-                "🐙 *Delete GitHub Account Permanently*\n\n"
-                "⚠️ *Warning:* All your private and public repositories will be permanently deleted.\n\n"
+                "🐙 *Steps to Delete GitHub Account*\n\n"
                 "━━━━━━━━━━━━━━━━━━━━━━━\n\n"
                 "🌐 *From the Website:*\n\n"
                 "1️⃣ Go to *Settings*\n"
-                "2️⃣ Scroll down to the *Danger Zone* section\n"
+                "2️⃣ Scroll down to *Danger Zone*\n"
                 "3️⃣ Click *Delete your account*\n"
-                "4️⃣ Read the warnings and enter your username to confirm\n"
+                "4️⃣ Enter your username to confirm\n"
                 "5️⃣ Click *I understand, delete this account*\n\n"
-                "━━━━━━━━━━━━━━━━━━━━━━━\n"
-                "💡 *Note:* Transfer or back up your important repositories before deletion."
+                "🌐 *Or use the direct link 👇*"
             ),
         },
     },

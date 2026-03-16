@@ -758,8 +758,32 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         )
         return MAIN_MENU
 
-    elif data.startswith("dg_"):
+    elif data.startswith("dg_") and not data.startswith("dg_steps_"):
         platform_key = data[3:]  # إزالة بادئة dg_
+        guide = DELETE_GUIDES.get(platform_key)
+        if guide:
+            lang = get_user_lang(context)
+            what_you_lose = guide[lang]["what_you_lose"]
+            keyboard = [
+                [InlineKeyboardButton(
+                    "🗑️ نعم، أريد الحذف — أرني الخطوات" if lang == "ar" else "🗑️ Yes, I want to delete — Show steps",
+                    callback_data=f"dg_steps_{platform_key}"
+                )],
+                [InlineKeyboardButton(
+                    t(context, "delete_guide_back"),
+                    callback_data="delete_guide"
+                )],
+                [InlineKeyboardButton(t(context, "btn_back"), callback_data="back_main")],
+            ]
+            await query.edit_message_text(
+                what_you_lose,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+        return MAIN_MENU
+
+    elif data.startswith("dg_steps_"):
+        platform_key = data[9:]  # إزالة بادئة dg_steps_
         guide = DELETE_GUIDES.get(platform_key)
         if guide:
             lang = get_user_lang(context)
