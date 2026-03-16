@@ -108,7 +108,8 @@ logger = logging.getLogger(__name__)
     WAITING_USERNAME_COMPARE_2,
     WAITING_DOWNLOAD_URL,
     WAITING_HUNT_USERNAME,
-) = range(9)
+    WAITING_TIKTOK_INFO,
+) = range(10)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -253,6 +254,18 @@ TEXTS = {
             "⚠️ جميع الخطوات دقيقة ومحدّثة. تأكد من رغبتك في الحذف قبل المتابعة."
         ),
         "delete_guide_back": "🗑️ اختر منصة أخرى",
+        # TikTok Info
+        "btn_tiktok_info": "🎵 معلومات TikTok",
+        "tiktok_info_intro": (
+            "🎵 *معلومات حساب TikTok التفصيلية*\n\n"
+            "أرسل اسم المستخدم وسأجلب لك جميع المعلومات التفصيلية.\n\n"
+            "💡 مثال: `charlidamelio` أو `wl4`\n\n"
+            "_لا تضع @ في البداية_"
+        ),
+        "tiktok_info_loading": "🔍 جاري جلب معلومات `{username}`...",
+        "tiktok_info_not_found": "❌ لم يوجد حساب بهذا الاسم. تأكد من صحة اليوزر وحاول مرة أخرى.",
+        "tiktok_info_error": "❌ حدث خطأ أثناء جلب المعلومات. حاول مرة أخرى.",
+        "tiktok_info_again": "🎵 بحث عن حساب آخر",
     },
     "en": {
         "welcome": (
@@ -393,6 +406,18 @@ TEXTS = {
             "⚠️ All steps are accurate and up to date. Make sure you want to delete before proceeding."
         ),
         "delete_guide_back": "🗑️ Choose another platform",
+        # TikTok Info
+        "btn_tiktok_info": "🎵 TikTok Info",
+        "tiktok_info_intro": (
+            "🎵 *TikTok Account Detailed Info*\n\n"
+            "Send a username and I'll fetch all detailed information.\n\n"
+            "💡 Example: `charlidamelio` or `wl4`\n\n"
+            "_Don't include @ at the beginning_"
+        ),
+        "tiktok_info_loading": "🔍 Fetching info for `{username}`...",
+        "tiktok_info_not_found": "❌ No account found with this username. Check the spelling and try again.",
+        "tiktok_info_error": "❌ An error occurred while fetching info. Please try again.",
+        "tiktok_info_again": "🎵 Search another account",
     }
 }
 
@@ -420,6 +445,7 @@ def get_main_keyboard(context):
             InlineKeyboardButton(tx["btn_hunt"], callback_data="hunt"),
         ],
         [
+            InlineKeyboardButton(tx["btn_tiktok_info"], callback_data="tiktok_info"),
             InlineKeyboardButton(tx["btn_delete_guide"], callback_data="delete_guide"),
         ],
         [
@@ -749,6 +775,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_HUNT_USERNAME
+
+    elif data == "tiktok_info" or data == "tiktok_info_again":
+        await query.edit_message_text(
+            t(context, "tiktok_info_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_TIKTOK_INFO
 
     elif data == "delete_guide":
         await query.edit_message_text(
@@ -1410,6 +1444,219 @@ _Follower Analyzer Bot_ 🤖
     return report.strip()
 
 
+# ===================== TikTok Info =====================
+
+def fetch_tiktok_user_info(username: str) -> dict:
+    """جلب معلومات مستخدم TikTok من tikwm API"""
+    try:
+        url = "https://www.tikwm.com/api/user/info"
+        params = {"unique_id": username}
+        headers = {"User-Agent": "Mozilla/5.0"}
+        resp = requests.get(url, params=params, headers=headers, timeout=15)
+        data = resp.json()
+        if data.get("code") == 0 and data.get("data"):
+            return {"success": True, "data": data["data"]}
+        return {"success": False, "error": data.get("msg", "Not found")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+def build_tiktok_info_report(info: dict, context) -> str:
+    """بناء تقرير معلومات TikTok التفصيلي"""
+    import datetime
+    lang = get_user_lang(context)
+    user = info.get("user", {})
+    stats = info.get("stats", {})
+
+    # البيانات الأساسية
+    uid = user.get("id", "N/A")
+    unique_id = user.get("uniqueId", "N/A")
+    nickname = user.get("nickname", "N/A")
+    bio = user.get("signature", "").strip()
+    sec_uid = user.get("secUid", "N/A")
+    verified = user.get("verified", False)
+    private = user.get("privateAccount", False)
+    open_fav = user.get("openFavorite", False)
+    create_ts = user.get("createTime", 0)
+    bio_link = user.get("bioLink", {}).get("link", "") if isinstance(user.get("bioLink"), dict) else ""
+    ins_id = user.get("ins_id", "")
+    twitter_id = user.get("twitter_id", "")
+    yt_title = user.get("youtube_channel_title", "")
+    comment_setting = user.get("commentSetting")
+    duet_setting = user.get("duetSetting")
+    stitch_setting = user.get("stitchSetting")
+
+    # الإحصائيات
+    followers = stats.get("followerCount", 0)
+    following = stats.get("followingCount", 0)
+    hearts = stats.get("heartCount", 0)
+    videos = stats.get("videoCount", 0)
+
+    # تحويل timestamp
+    if create_ts:
+        create_date = datetime.datetime.utcfromtimestamp(create_ts).strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        create_date = "N/A"
+
+    # دوال المساعدة
+    def yes_no(val, lang):
+        if val:
+            return ("✅ نعم" if lang == "ar" else "✅ Yes")
+        return ("❌ لا" if lang == "ar" else "❌ No")
+
+    def setting_label(val, lang):
+        mapping = {
+            0: ("🌎 الجميع" if lang == "ar" else "🌎 Everyone"),
+            1: ("👥 المتابعون" if lang == "ar" else "👥 Friends"),
+            2: ("🔒 مغلق" if lang == "ar" else "🔒 Off"),
+        }
+        if val is None:
+            return "🌎 Everyone" if lang == "en" else "🌎 الجميع"
+        return mapping.get(val, str(val))
+
+    if lang == "ar":
+        report = f"""
+🎵 *معلومات حساب TikTok*
+━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 *معلومات الحساب*
+🔑 المعرّف: `{uid}`
+👤 اليوزر: `@{unique_id}`
+🏷️ الاسم المعروض: `{nickname}`
+📝 البايو: {bio if bio else '—'}
+📅 تاريخ الإنشاء: `{create_date} UTC`
+✅ موثّق: {yes_no(verified, lang)}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 *الإحصائيات*
+👥 المتابعون: `{format_number(followers)}`
+👀 يتابع: `{format_number(following)}`
+❤️ الإعجابات: `{format_number(hearts)}`
+🎥 الفيديوهات: `{format_number(videos)}`
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 *إعدادات الخصوصية*
+🔐 حساب خاص: {yes_no(private, lang)}
+⭐ المفضلات ظاهرة: {yes_no(open_fav, lang)}
+💬 التعليقات: {setting_label(comment_setting, lang)}
+🎭 الديوت: {setting_label(duet_setting, lang)}
+✂️ الستيتش: {setting_label(stitch_setting, lang)}
+"""
+    else:
+        report = f"""
+🎵 *TikTok Account Info*
+━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 *Account Details*
+🔑 Account ID: `{uid}`
+👤 Username: `@{unique_id}`
+🏷️ Nickname: `{nickname}`
+📝 Bio: {bio if bio else '—'}
+📅 Created: `{create_date} UTC`
+✅ Verified: {yes_no(verified, lang)}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+📊 *Statistics*
+👥 Followers: `{format_number(followers)}`
+👀 Following: `{format_number(following)}`
+❤️ Likes: `{format_number(hearts)}`
+🎥 Videos: `{format_number(videos)}`
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+🔒 *Privacy Settings*
+🔐 Private Account: {yes_no(private, lang)}
+⭐ Open Favorites: {yes_no(open_fav, lang)}
+💬 Comments: {setting_label(comment_setting, lang)}
+🎭 Duet: {setting_label(duet_setting, lang)}
+✂️ Stitch: {setting_label(stitch_setting, lang)}
+"""
+
+    # إضافة الروابط الاجتماعية إن وجدت
+    social_links = []
+    if bio_link:
+        social_links.append(f"🔗 [{'الموقع' if lang == 'ar' else 'Website'}]({bio_link})")
+    if ins_id:
+        social_links.append(f"📸 [Instagram](https://instagram.com/{ins_id})")
+    if twitter_id:
+        social_links.append(f"🐦 [Twitter](https://twitter.com/{twitter_id})")
+    if yt_title:
+        social_links.append(f"▶️ YouTube: {yt_title}")
+
+    if social_links:
+        section_title = "🔗 *روابط أخرى*" if lang == "ar" else "🔗 *Other Links*"
+        report += f"━━━━━━━━━━━━━━━━━━━━━━━\n\n{section_title}\n" + "\n".join(social_links) + "\n"
+
+    # Secret UID
+    report += f"\n━━━━━━━━━━━━━━━━━━━━━━━\n"
+    report += f"🔐 Secret UID:\n`{sec_uid}`\n"
+    report += f"\n━━━━━━━━━━━━━━━━━━━━━━━\n"
+    report += "_Follower Analyzer Bot_ 🤖"
+
+    return report.strip()
+
+
+async def receive_tiktok_info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """استقبال يوزر TikTok وجلب معلوماته التفصيلية"""
+    username = update.message.text.strip().lstrip("@").strip()
+
+    if not username or len(username) < 2:
+        await update.message.reply_text(
+            t(context, "tiktok_info_not_found"),
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_TIKTOK_INFO
+
+    loading_msg = await update.message.reply_text(
+        t(context, "tiktok_info_loading", username=username),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, fetch_tiktok_user_info, username
+        )
+
+        if not result["success"]:
+            await loading_msg.edit_text(
+                t(context, "tiktok_info_not_found"),
+                reply_markup=get_back_keyboard(context),
+            )
+            return WAITING_TIKTOK_INFO
+
+        report = build_tiktok_info_report(result["data"], context)
+
+        lang = get_user_lang(context)
+        tx = TEXTS[lang]
+        keyboard = [
+            [InlineKeyboardButton(tx["tiktok_info_again"], callback_data="tiktok_info_again")],
+            [InlineKeyboardButton(tx["btn_back"], callback_data="back_main")],
+        ]
+
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+
+    except Exception as e:
+        logger.error(f"خطأ في TikTok Info: {e}")
+        try:
+            await loading_msg.edit_text(
+                t(context, "tiktok_info_error"),
+                reply_markup=get_back_keyboard(context),
+            )
+        except:
+            pass
+
+    return WAITING_TIKTOK_INFO
+
+
 # ===================== معالج back_main المستقل =====================
 
 async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1514,6 +1761,10 @@ def main():
             ],
             WAITING_HUNT_USERNAME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_hunt_username),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_TIKTOK_INFO: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_tiktok_info),
                 CallbackQueryHandler(button_handler),
             ],
         },
