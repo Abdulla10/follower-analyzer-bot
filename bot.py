@@ -32,6 +32,7 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 from analyzer import analyze_account, format_number
+from username_hunter import hunt_username
 
 # ===================== الإعدادات =====================
 
@@ -105,7 +106,8 @@ logger = logging.getLogger(__name__)
     WAITING_PLATFORM_COMPARE_2,
     WAITING_USERNAME_COMPARE_2,
     WAITING_DOWNLOAD_URL,
-) = range(8)
+    WAITING_HUNT_USERNAME,
+) = range(9)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -226,6 +228,22 @@ TEXTS = {
         "compare_rating": "🏆 التقييم النهائي:",
         "compare_winner": "🏆 الفائز: @{username} ({icon})",
         "compare_tie": "🤝 تعادل بين الحسابين",
+        # Username Hunt
+        "btn_hunt": "🔥 Username Hunt",
+        "hunt_intro": (
+            "🔥 *Username Hunt — خريطة الهوية الرقمية*\n\n"
+            "أرسل اسم المستخدم وسأبحث عنه على أكثر من *25 منصة* في نفس الوقت.\n\n"
+            "💡 مثال: `cristiano` أو `elonmusk`\n\n"
+            "_لا تضع @ في البداية_"
+        ),
+        "hunt_searching": "🔍 جاري البحث عن `{username}` على {total} منصة...\n\n⏳ يرجى الانتظار (قد يستغرق 15-20 ثانية)",
+        "hunt_found_title": "🔥 *نتائج Username Hunt*",
+        "hunt_username_label": "🎯 اليوزر: `@{username}`",
+        "hunt_found_count": "✅ وُجد على *{found}* منصة من أصل *{total}* منصة مفحوصة",
+        "hunt_found_platforms": "📍 *المنصات التي وُجد فيها:*",
+        "hunt_not_found": "❌ *لم يُعثر على هذا اليوزر على أي منصة.*\n\nتأكد من صحة الاسم وحاول مرة أخرى.",
+        "hunt_search_another": "🔍 بحث عن يوزر آخر",
+        "hunt_error": "❌ حدث خطأ أثناء البحث. حاول مرة أخرى.",
     },
     "en": {
         "welcome": (
@@ -342,6 +360,22 @@ TEXTS = {
         "compare_rating": "🏆 Final Rating:",
         "compare_winner": "🏆 Winner: @{username} ({icon})",
         "compare_tie": "🤝 It's a tie!",
+        # Username Hunt
+        "btn_hunt": "🔥 Username Hunt",
+        "hunt_intro": (
+            "🔥 *Username Hunt — Digital Identity Map*\n\n"
+            "Send a username and I'll search for it across *25+ platforms* simultaneously.\n\n"
+            "💡 Example: `cristiano` or `elonmusk`\n\n"
+            "_Don't include @ at the beginning_"
+        ),
+        "hunt_searching": "🔍 Searching for `{username}` across {total} platforms...\n\n⏳ Please wait (may take 15-20 seconds)",
+        "hunt_found_title": "🔥 *Username Hunt Results*",
+        "hunt_username_label": "🎯 Username: `@{username}`",
+        "hunt_found_count": "✅ Found on *{found}* out of *{total}* platforms checked",
+        "hunt_found_platforms": "📍 *Platforms found on:*",
+        "hunt_not_found": "❌ *This username was not found on any platform.*\n\nMake sure the name is correct and try again.",
+        "hunt_search_another": "🔍 Search another username",
+        "hunt_error": "❌ An error occurred during the search. Please try again.",
     }
 }
 
@@ -366,6 +400,7 @@ def get_main_keyboard(context):
         ],
         [
             InlineKeyboardButton(tx["btn_download"], callback_data="download"),
+            InlineKeyboardButton(tx["btn_hunt"], callback_data="hunt"),
         ],
         [
             InlineKeyboardButton(tx["btn_help"], callback_data="help"),
@@ -648,6 +683,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_DOWNLOAD_URL
+
+    elif data == "hunt":
+        await query.edit_message_text(
+            t(context, "hunt_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_HUNT_USERNAME
+
+    elif data == "hunt_again":
+        await query.edit_message_text(
+            t(context, "hunt_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_HUNT_USERNAME
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -1114,6 +1165,143 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
     return WAITING_DOWNLOAD_URL
 
 
+# ===================== Username Hunt =====================
+
+async def receive_hunt_username(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """استقبال اسم المستخدم والبحث عنه على جميع المنصات"""
+    username = update.message.text.strip().lstrip("@").strip()
+
+    if not username or len(username) < 2:
+        await update.message.reply_text(t(context, "invalid_username"))
+        return WAITING_HUNT_USERNAME
+
+    from username_hunter import PLATFORMS
+    total = len(PLATFORMS)
+
+    loading_msg = await update.message.reply_text(
+        t(context, "hunt_searching", username=username, total=total),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    try:
+        results = await asyncio.get_event_loop().run_in_executor(
+            None, hunt_username, username
+        )
+
+        found_list = results["found"]
+        total_found = results["total_found"]
+        total_checked = results["total_checked"]
+
+        await loading_msg.delete()
+
+        if total_found == 0:
+            await update.message.reply_text(
+                t(context, "hunt_not_found"),
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=get_hunt_keyboard(context),
+            )
+            return WAITING_HUNT_USERNAME
+
+        # بناء التقرير
+        report = build_hunt_report(username, found_list, total_found, total_checked, context)
+
+        await update.message.reply_text(
+            report,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_hunt_keyboard(context),
+            disable_web_page_preview=True,
+        )
+
+    except Exception as e:
+        logger.error(f"خطأ في Username Hunt: {e}")
+        try:
+            await loading_msg.edit_text(
+                t(context, "hunt_error"),
+                reply_markup=get_back_keyboard(context),
+            )
+        except:
+            pass
+
+    return WAITING_HUNT_USERNAME
+
+
+def get_hunt_keyboard(context):
+    lang = get_user_lang(context)
+    tx = TEXTS[lang]
+    keyboard = [
+        [InlineKeyboardButton(tx["hunt_search_another"], callback_data="hunt_again")],
+        [InlineKeyboardButton(tx["btn_back"], callback_data="back_main")],
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def build_hunt_report(username: str, found_list: list, total_found: int, total_checked: int, context) -> str:
+    """بناء تقرير Username Hunt"""
+    # تجميع المنصات حسب الفئة
+    categories = {}
+    category_names_ar = {
+        "social": "📱 التواصل الاجتماعي",
+        "professional": "💼 المهني",
+        "tech": "💻 التقنية والبرمجة",
+        "creative": "🎨 الإبداع والفن",
+        "community": "🎮 المجتمعات",
+        "blog": "📝 التدوين والمحتوى",
+        "other": "🔗 أخرى",
+    }
+    category_names_en = {
+        "social": "📱 Social Media",
+        "professional": "💼 Professional",
+        "tech": "💻 Tech & Dev",
+        "creative": "🎨 Creative",
+        "community": "🎮 Communities",
+        "blog": "📝 Blogging",
+        "other": "🔗 Other",
+    }
+    lang = get_user_lang(context)
+    category_names = category_names_ar if lang == "ar" else category_names_en
+
+    for item in found_list:
+        cat = item["category"]
+        if cat not in categories:
+            categories[cat] = []
+        categories[cat].append(item)
+
+    platforms_text = ""
+    for cat, items in categories.items():
+        cat_label = category_names.get(cat, cat)
+        platforms_text += f"\n{cat_label}\n"
+        for item in items:
+            platforms_text += f"{item['icon']} [{item['platform']}]({item['url']})\n"
+
+    # حساب نسبة الانتشار
+    spread_pct = round((total_found / total_checked) * 100)
+    if spread_pct >= 60:
+        spread_label = "🔥 انتشار واسع جداً" if lang == "ar" else "🔥 Very Wide Spread"
+    elif spread_pct >= 30:
+        spread_label = "✅ انتشار جيد" if lang == "ar" else "✅ Good Spread"
+    elif spread_pct >= 10:
+        spread_label = "⚠️ انتشار محدود" if lang == "ar" else "⚠️ Limited Spread"
+    else:
+        spread_label = "🔵 انتشار ضعيف" if lang == "ar" else "🔵 Low Spread"
+
+    report = f"""
+{t(context, 'hunt_found_title')}
+━━━━━━━━━━━━━━━━━━━━━━━
+
+{t(context, 'hunt_username_label', username=username)}
+{t(context, 'hunt_found_count', found=total_found, total=total_checked)}
+🌐 {spread_label}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+
+{t(context, 'hunt_found_platforms')}
+{platforms_text}
+━━━━━━━━━━━━━━━━━━━━━━━
+_Follower Analyzer Bot_ 🤖
+"""
+    return report.strip()
+
+
 # ===================== معالج back_main المستقل =====================
 
 async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -1214,6 +1402,10 @@ def main():
             ],
             WAITING_DOWNLOAD_URL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_download_url),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_HUNT_USERNAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_hunt_username),
                 CallbackQueryHandler(button_handler),
             ],
         },
