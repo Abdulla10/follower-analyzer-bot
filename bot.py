@@ -33,6 +33,7 @@ from telegram.constants import ParseMode
 
 from analyzer import analyze_account, format_number
 from username_hunter import hunt_username
+from delete_guides import DELETE_GUIDES
 
 # ===================== الإعدادات =====================
 
@@ -244,6 +245,14 @@ TEXTS = {
         "hunt_not_found": "❌ *لم يُعثر على هذا اليوزر على أي منصة.*\n\nتأكد من صحة الاسم وحاول مرة أخرى.",
         "hunt_search_another": "🔍 بحث عن يوزر آخر",
         "hunt_error": "❌ حدث خطأ أثناء البحث. حاول مرة أخرى.",
+        # دليل الحذف
+        "btn_delete_guide": "🗑️ دليل الحذف",
+        "delete_guide_intro": (
+            "🗑️ *دليل حذف الحسابات*\n\n"
+            "اختر المنصة التي تريد حذف حسابك منها:\n\n"
+            "⚠️ جميع الخطوات دقيقة ومحدّثة. تأكد من رغبتك في الحذف قبل المتابعة."
+        ),
+        "delete_guide_back": "🗑️ اختر منصة أخرى",
     },
     "en": {
         "welcome": (
@@ -376,6 +385,14 @@ TEXTS = {
         "hunt_not_found": "❌ *This username was not found on any platform.*\n\nMake sure the name is correct and try again.",
         "hunt_search_another": "🔍 Search another username",
         "hunt_error": "❌ An error occurred during the search. Please try again.",
+        # Delete Guide
+        "btn_delete_guide": "🗑️ Delete Guide",
+        "delete_guide_intro": (
+            "🗑️ *Account Deletion Guide*\n\n"
+            "Choose the platform you want to delete your account from:\n\n"
+            "⚠️ All steps are accurate and up to date. Make sure you want to delete before proceeding."
+        ),
+        "delete_guide_back": "🗑️ Choose another platform",
     }
 }
 
@@ -403,6 +420,9 @@ def get_main_keyboard(context):
             InlineKeyboardButton(tx["btn_hunt"], callback_data="hunt"),
         ],
         [
+            InlineKeyboardButton(tx["btn_delete_guide"], callback_data="delete_guide"),
+        ],
+        [
             InlineKeyboardButton(tx["btn_help"], callback_data="help"),
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
         ],
@@ -427,6 +447,36 @@ def get_back_keyboard(context):
     lang = get_user_lang(context)
     tx = TEXTS[lang]
     keyboard = [[InlineKeyboardButton(tx["btn_back"], callback_data="back_main")]]
+    return InlineKeyboardMarkup(keyboard)
+
+
+def get_delete_guide_keyboard(context):
+    """لوحة مفاتيح اختيار المنصة لدليل الحذف"""
+    keyboard = [
+        [
+            InlineKeyboardButton("📸 Instagram", callback_data="dg_instagram"),
+            InlineKeyboardButton("🎵 TikTok", callback_data="dg_tiktok"),
+        ],
+        [
+            InlineKeyboardButton("🐦 Twitter / X", callback_data="dg_twitter"),
+            InlineKeyboardButton("👻 Snapchat", callback_data="dg_snapchat"),
+        ],
+        [
+            InlineKeyboardButton("📘 Facebook", callback_data="dg_facebook"),
+            InlineKeyboardButton("▶️ YouTube", callback_data="dg_youtube"),
+        ],
+        [
+            InlineKeyboardButton("✈️ Telegram", callback_data="dg_telegram"),
+            InlineKeyboardButton("💼 LinkedIn", callback_data="dg_linkedin"),
+        ],
+        [
+            InlineKeyboardButton("🤖 Reddit", callback_data="dg_reddit"),
+            InlineKeyboardButton("🐙 GitHub", callback_data="dg_github"),
+        ],
+        [
+            InlineKeyboardButton(TEXTS[get_user_lang(context)]["btn_back"], callback_data="back_main"),
+        ],
+    ]
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -699,6 +749,40 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_HUNT_USERNAME
+
+    elif data == "delete_guide":
+        await query.edit_message_text(
+            t(context, "delete_guide_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_delete_guide_keyboard(context),
+        )
+        return MAIN_MENU
+
+    elif data.startswith("dg_"):
+        platform_key = data[3:]  # إزالة بادئة dg_
+        guide = DELETE_GUIDES.get(platform_key)
+        if guide:
+            lang = get_user_lang(context)
+            steps = guide[lang]["steps"]
+            url = guide["url"]
+            keyboard = [
+                [InlineKeyboardButton(
+                    "🔗 رابط الحذف المباشر" if lang == "ar" else "🔗 Direct Deletion Link",
+                    url=url
+                )],
+                [InlineKeyboardButton(
+                    t(context, "delete_guide_back"),
+                    callback_data="delete_guide"
+                )],
+                [InlineKeyboardButton(t(context, "btn_back"), callback_data="back_main")],
+            ]
+            await query.edit_message_text(
+                steps,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                disable_web_page_preview=True,
+            )
+        return MAIN_MENU
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
