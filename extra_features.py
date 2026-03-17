@@ -46,7 +46,7 @@ def check_email_breach(email: str) -> dict:
         return {'success': False, 'error': str(e)}
 
 
-def build_breach_report(data: dict, lang: str = 'ar') -> str:
+def build_breach_report(data: dict, email: str = '', lang: str = 'ar') -> str:
     """يبني تقرير كاشف التسريبات"""
     email = data.get('email', '')
     
@@ -258,7 +258,7 @@ def scan_website(url: str) -> dict:
     return result
 
 
-def build_website_report(data: dict, lang: str = 'ar') -> str:
+def build_website_report(data: dict, url: str = '', lang: str = 'ar') -> str:
     """يبني تقرير فاحص الموقع"""
     url = data.get('url', '')
     domain = data.get('domain', '')
@@ -407,7 +407,7 @@ def lookup_phone(phone: str) -> dict:
         return {'success': False, 'error': str(e)}
 
 
-def build_phone_report(data: dict, lang: str = 'ar') -> str:
+def build_phone_report(data: dict, phone: str = '', lang: str = 'ar') -> str:
     """يبني تقرير معلومات الرقم"""
     if not data.get('success'):
         if lang == 'ar':
@@ -555,7 +555,7 @@ def shorten_url(url: str) -> dict:
         return {'success': False, 'error': str(e)}
 
 
-def build_shorturl_report(data: dict, lang: str = 'ar') -> str:
+def build_shorturl_report(data: dict, url: str = '', lang: str = 'ar') -> str:
     """يبني تقرير مختصر الروابط"""
     if not data.get('success'):
         if lang == 'ar':
