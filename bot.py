@@ -41,7 +41,6 @@ from extra_features import (
     reverse_image_search, build_reverse_image_report,
     shorten_url, build_shorturl_report,
 )
-from tiktok_views import send_views, format_views_result
 
 # ===================== الإعدادات =====================
 
@@ -122,8 +121,7 @@ logger = logging.getLogger(__name__)
     WAITING_PHONE_NUMBER,
     WAITING_REVERSE_IMAGE,
     WAITING_SHORTEN_URL,
-    WAITING_TIKTOK_VIEWS,
-) = range(16)
+) = range(15)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -326,20 +324,6 @@ TEXTS = {
         ),
         "shorten_loading": "⏳ جاري اختصار الرابط...",
         "shorten_again": "🔗 اختصار رابط آخر",
-        # زيادة المشاهدات
-        "btn_tiktok_views": "👁️ زيادة مشاهدات TikTok",
-        "views_intro": (
-            "👁️ *زيادة مشاهدات TikTok*\n\n"
-            "أرسل رابط فيديو TikTok وسأزيد مشاهداته مجاناً!\n\n"
-            "💡 أمثلة على الروابط المقبولة:\n"
-            "`https://www.tiktok.com/@username/video/1234567890`\n"
-            "`https://vm.tiktok.com/xxxxx`\n\n"
-            "⚡ يتم إرسال المشاهدات فوراً\n"
-            "⏳ يمكنك التكرار كل 15 دقيقة لنفس الحساب\n\n"
-            "_الخدمة مجانية 100% - لا تحتاج لكلمة مرور_"
-        ),
-        "views_loading": "👁️ جاري إرسال المشاهدات...\n⏳ يرجى الانتظار...",
-        "views_again": "👁️ إرسال مشاهدات لفيديو آخر",
     },
     "en": {
         "welcome": (
@@ -538,20 +522,6 @@ TEXTS = {
         ),
         "shorten_loading": "⏳ Shortening URL...",
         "shorten_again": "🔗 Shorten another URL",
-        # TikTok Views
-        "btn_tiktok_views": "👁️ Boost TikTok Views",
-        "views_intro": (
-            "👁️ *Boost TikTok Views*\n\n"
-            "Send a TikTok video link and I'll boost its views for free!\n\n"
-            "💡 Supported link formats:\n"
-            "`https://www.tiktok.com/@username/video/1234567890`\n"
-            "`https://vm.tiktok.com/xxxxx`\n\n"
-            "⚡ Views are sent instantly\n"
-            "⏳ You can repeat every 15 minutes for the same account\n\n"
-            "_100% Free - No password required_"
-        ),
-        "views_loading": "👁️ Sending views...\n⏳ Please wait...",
-        "views_again": "👁️ Send views to another video",
     }
 }
 
@@ -592,10 +562,9 @@ def get_main_keyboard(context):
         ],
         [
             InlineKeyboardButton(tx["btn_shorten"], callback_data="shorten_url"),
-            InlineKeyboardButton(tx["btn_tiktok_views"], callback_data="tiktok_views"),
+            InlineKeyboardButton(tx["btn_help"], callback_data="help"),
         ],
         [
-            InlineKeyboardButton(tx["btn_help"], callback_data="help"),
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
         ],
     ]
@@ -1028,14 +997,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_SHORTEN_URL
-
-    elif data in ("tiktok_views", "views_again"):
-        await query.edit_message_text(
-            t(context, "views_intro"),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(context),
-        )
-        return WAITING_TIKTOK_VIEWS
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -2078,44 +2039,6 @@ async def receive_shorten_url(update: Update, context: ContextTypes.DEFAULT_TYPE
     return WAITING_SHORTEN_URL
 
 
-async def receive_tiktok_views(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """معالج استقبال رابط فيديو TikTok لزيادة المشاهدات"""
-    video_url = update.message.text.strip()
-    lang = get_user_lang(context)
-
-    loading_msg = await update.message.reply_text(
-        t(context, "views_loading"),
-        parse_mode=ParseMode.MARKDOWN,
-    )
-
-    try:
-        # إرسال المشاهدات في thread منفصل لعدم تجميد البوت
-        success, error_code, data = await asyncio.get_event_loop().run_in_executor(
-            None, send_views, video_url
-        )
-
-        result_text = format_views_result(success, error_code, data, lang)
-
-        keyboard = [
-            [InlineKeyboardButton(TEXTS[lang]["views_again"], callback_data="views_again")],
-            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
-        ]
-
-        await loading_msg.delete()
-        await update.message.reply_text(
-            result_text,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-    except Exception as e:
-        logger.error(f"خطأ في TikTok Views: {e}")
-        await loading_msg.edit_text(
-            "❌ حدث خطأ. حاول مرة أخرى.",
-            reply_markup=get_back_keyboard(context)
-        )
-
-    return WAITING_TIKTOK_VIEWS
-
 
 # ===================== معالج باك_ماين المستقل =====================
 
@@ -2246,10 +2169,6 @@ def main():
             ],
             WAITING_SHORTEN_URL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_shorten_url),
-                CallbackQueryHandler(button_handler),
-            ],
-            WAITING_TIKTOK_VIEWS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_tiktok_views),
                 CallbackQueryHandler(button_handler),
             ],
         },
