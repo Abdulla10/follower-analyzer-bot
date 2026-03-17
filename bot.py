@@ -34,6 +34,13 @@ from telegram.constants import ParseMode
 from analyzer import analyze_account, format_number
 from username_hunter import hunt_username
 from delete_guides import DELETE_GUIDES
+from extra_features import (
+    check_email_breach, build_breach_report,
+    scan_website, build_website_report,
+    lookup_phone, build_phone_report,
+    reverse_image_search, build_reverse_image_report,
+    shorten_url, build_shorturl_report,
+)
 
 # ===================== الإعدادات =====================
 
@@ -109,7 +116,12 @@ logger = logging.getLogger(__name__)
     WAITING_DOWNLOAD_URL,
     WAITING_HUNT_USERNAME,
     WAITING_TIKTOK_INFO,
-) = range(10)
+    WAITING_BREACH_EMAIL,
+    WAITING_WEBSITE_URL,
+    WAITING_PHONE_NUMBER,
+    WAITING_REVERSE_IMAGE,
+    WAITING_SHORTEN_URL,
+) = range(15)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -266,6 +278,52 @@ TEXTS = {
         "tiktok_info_not_found": "❌ لم يوجد حساب بهذا الاسم. تأكد من صحة اليوزر وحاول مرة أخرى.",
         "tiktok_info_error": "❌ حدث خطأ أثناء جلب المعلومات. حاول مرة أخرى.",
         "tiktok_info_again": "🎵 بحث عن حساب آخر",
+        # الميزات الجديدة
+        "btn_breach": "🔐 كاشف التسريبات",
+        "btn_website": "🌐 فاحص الموقع",
+        "btn_phone": "📱 معلومات الرقم",
+        "btn_reverse_image": "🖼️ بحث عكسي بالصورة",
+        "btn_shorten": "🔗 مختصر الروابط",
+        "breach_intro": (
+            "🔐 *كاشف التسريبات*\n\n"
+            "أرسل إيميلك وسأتحقق إذا كان ظهر في أي اختراق أو تسريب بيانات.\n\n"
+            "💡 مثال: `example@gmail.com`\n\n"
+            "_جميع البيانات مشفرة ولا تُحفظ_"
+        ),
+        "breach_loading": "🔍 جاري فحص الإيميل `{email}`...",
+        "breach_again": "🔐 فحص إيميل آخر",
+        "website_intro": (
+            "🌐 *فاحص الموقع*\n\n"
+            "أرسل رابط أي موقع وسأفحصه وأعطيك تقريراً كاملاً.\n\n"
+            "💡 مثال: `google.com` أو `https://example.com`"
+        ),
+        "website_loading": "🔍 جاري فحص الموقع `{url}`...",
+        "website_again": "🌐 فحص موقع آخر",
+        "phone_intro": (
+            "📱 *معلومات الرقم*\n\n"
+            "أرسل رقم الجوال بالصيغة الدولية وسأعطيك معلوماته.\n\n"
+            "💡 مثال: `+966501234567` أو `+1234567890`\n\n"
+            "_يكشف الدولة والشركة ونوع الخط فقط — لا يكشف هوية الشخص_"
+        ),
+        "phone_loading": "🔍 جاري جلب معلومات الرقم...",
+        "phone_again": "📱 فحص رقم آخر",
+        "reverse_image_intro": (
+            "🖼️ *البحث العكسي بالصورة*\n\n"
+            "أرسل أي صورة وسأعطيك روابط للبحث عنها على أكبر محركات البحث.\n\n"
+            "💡 مفيد لـ:\n"
+            "• كشف الحسابات المزيفة\n"
+            "• معرفة مصدر الصورة\n"
+            "• البحث عن شخص"
+        ),
+        "reverse_image_loading": "🔍 جاري إعداد روابط البحث...",
+        "reverse_image_again": "🖼️ بحث عن صورة أخرى",
+        "shorten_intro": (
+            "🔗 *مختصر الروابط*\n\n"
+            "أرسل أي رابط طويل وسأختصره لك فوراً.\n\n"
+            "💡 مثال: `https://www.example.com/very/long/url?param=value`"
+        ),
+        "shorten_loading": "⏳ جاري اختصار الرابط...",
+        "shorten_again": "🔗 اختصار رابط آخر",
     },
     "en": {
         "welcome": (
@@ -418,6 +476,52 @@ TEXTS = {
         "tiktok_info_not_found": "❌ No account found with this username. Check the spelling and try again.",
         "tiktok_info_error": "❌ An error occurred while fetching info. Please try again.",
         "tiktok_info_again": "🎵 Search another account",
+        # New Features
+        "btn_breach": "🔐 Breach Checker",
+        "btn_website": "🌐 Website Scanner",
+        "btn_phone": "📱 Phone Lookup",
+        "btn_reverse_image": "🖼️ Reverse Image Search",
+        "btn_shorten": "🔗 URL Shortener",
+        "breach_intro": (
+            "🔐 *Data Breach Checker*\n\n"
+            "Send your email and I'll check if it appeared in any data breach.\n\n"
+            "💡 Example: `example@gmail.com`\n\n"
+            "_All data is encrypted and not stored_"
+        ),
+        "breach_loading": "🔍 Checking email `{email}`...",
+        "breach_again": "🔐 Check another email",
+        "website_intro": (
+            "🌐 *Website Scanner*\n\n"
+            "Send any website URL and I'll scan it and give you a full report.\n\n"
+            "💡 Example: `google.com` or `https://example.com`"
+        ),
+        "website_loading": "🔍 Scanning website `{url}`...",
+        "website_again": "🌐 Scan another website",
+        "phone_intro": (
+            "📱 *Phone Lookup*\n\n"
+            "Send a phone number in international format and I'll fetch its info.\n\n"
+            "💡 Example: `+966501234567` or `+1234567890`\n\n"
+            "_Shows country, carrier, and line type only — does not reveal identity_"
+        ),
+        "phone_loading": "🔍 Fetching phone number info...",
+        "phone_again": "📱 Check another number",
+        "reverse_image_intro": (
+            "🖼️ *Reverse Image Search*\n\n"
+            "Send any image and I'll give you links to search for it on major search engines.\n\n"
+            "💡 Useful for:\n"
+            "• Detecting fake accounts\n"
+            "• Finding image source\n"
+            "• Searching for a person"
+        ),
+        "reverse_image_loading": "🔍 Preparing search links...",
+        "reverse_image_again": "🖼️ Search another image",
+        "shorten_intro": (
+            "🔗 *URL Shortener*\n\n"
+            "Send any long URL and I'll shorten it instantly.\n\n"
+            "💡 Example: `https://www.example.com/very/long/url?param=value`"
+        ),
+        "shorten_loading": "⏳ Shortening URL...",
+        "shorten_again": "🔗 Shorten another URL",
     }
 }
 
@@ -449,7 +553,18 @@ def get_main_keyboard(context):
             InlineKeyboardButton(tx["btn_delete_guide"], callback_data="delete_guide"),
         ],
         [
+            InlineKeyboardButton(tx["btn_breach"], callback_data="breach"),
+            InlineKeyboardButton(tx["btn_website"], callback_data="website_scan"),
+        ],
+        [
+            InlineKeyboardButton(tx["btn_phone"], callback_data="phone_lookup"),
+            InlineKeyboardButton(tx["btn_reverse_image"], callback_data="reverse_image"),
+        ],
+        [
+            InlineKeyboardButton(tx["btn_shorten"], callback_data="shorten_url"),
             InlineKeyboardButton(tx["btn_help"], callback_data="help"),
+        ],
+        [
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
         ],
     ]
@@ -841,6 +956,47 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 disable_web_page_preview=True,
             )
         return MAIN_MENU
+
+    # الميزات الجديدة
+    elif data in ("breach", "breach_again"):
+        await query.edit_message_text(
+            t(context, "breach_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_BREACH_EMAIL
+
+    elif data in ("website_scan", "website_again"):
+        await query.edit_message_text(
+            t(context, "website_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_WEBSITE_URL
+
+    elif data in ("phone_lookup", "phone_again"):
+        await query.edit_message_text(
+            t(context, "phone_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_PHONE_NUMBER
+
+    elif data in ("reverse_image", "reverse_image_again"):
+        await query.edit_message_text(
+            t(context, "reverse_image_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_REVERSE_IMAGE
+
+    elif data in ("shorten_url", "shorten_again"):
+        await query.edit_message_text(
+            t(context, "shorten_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_SHORTEN_URL
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -1727,7 +1883,163 @@ async def receive_tiktok_info(update: Update, context: ContextTypes.DEFAULT_TYPE
     return WAITING_TIKTOK_INFO
 
 
-# ===================== معالج back_main المستقل =====================
+## ===================== الميزات الجديدة =====================
+
+async def receive_breach_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    email = update.message.text.strip()
+    if "@" not in email or "." not in email:
+        await update.message.reply_text(
+            "⚠️ إيميل غير صحيح. أرسل إيميل صحيح مثل: example@gmail.com",
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_BREACH_EMAIL
+
+    loading_msg = await update.message.reply_text(
+        t(context, "breach_loading", email=email),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, check_email_breach, email)
+        report = build_breach_report(result, email, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["breach_again"], callback_data="breach_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report, parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        logger.error(f"خطأ في Breach Checker: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_BREACH_EMAIL
+
+
+async def receive_website_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    url = update.message.text.strip()
+    if not url.startswith("http"):
+        url = "https://" + url
+
+    loading_msg = await update.message.reply_text(
+        t(context, "website_loading", url=url[:50]),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, scan_website, url)
+        report = build_website_report(result, url, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["website_again"], callback_data="website_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report, parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        logger.error(f"خطأ في Website Scanner: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_WEBSITE_URL
+
+
+async def receive_phone_number(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    phone = update.message.text.strip()
+
+    loading_msg = await update.message.reply_text(
+        t(context, "phone_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, lookup_phone, phone)
+        report = build_phone_report(result, phone, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["phone_again"], callback_data="phone_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report, parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+    except Exception as e:
+        logger.error(f"خطأ في Phone Lookup: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_PHONE_NUMBER
+
+
+async def receive_reverse_image(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    if not update.message.photo:
+        await update.message.reply_text(
+            "⚠️ أرسل صورة وليس نصاً.",
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_REVERSE_IMAGE
+
+    loading_msg = await update.message.reply_text(
+        t(context, "reverse_image_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        # تحميل الصورة ورفعها
+        photo = update.message.photo[-1]
+        file = await context.bot.get_file(photo.file_id)
+        file_url = file.file_path
+
+        result = await asyncio.get_event_loop().run_in_executor(None, reverse_image_search, file_url)
+        report = build_reverse_image_report(result, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["reverse_image_again"], callback_data="reverse_image_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report, parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        logger.error(f"خطأ في Reverse Image: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_REVERSE_IMAGE
+
+
+async def receive_shorten_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    url = update.message.text.strip()
+    if not url.startswith("http"):
+        url = "https://" + url
+
+    loading_msg = await update.message.reply_text(
+        t(context, "shorten_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, shorten_url, url)
+        report = build_shorturl_report(result, url, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["shorten_again"], callback_data="shorten_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report, parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        logger.error(f"خطأ في URL Shortener: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_SHORTEN_URL
+
+
+# ===================== معالج باك_ماين المستقل =====================
 
 async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """معالج مستقل لزر القائمة الرئيسية - يعمل من أي رسالة"""
@@ -1835,6 +2147,27 @@ def main():
             ],
             WAITING_TIKTOK_INFO: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_tiktok_info),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_BREACH_EMAIL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_breach_email),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_WEBSITE_URL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_website_url),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_PHONE_NUMBER: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_phone_number),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_REVERSE_IMAGE: [
+                MessageHandler(filters.PHOTO, receive_reverse_image),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_reverse_image),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_SHORTEN_URL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_shorten_url),
                 CallbackQueryHandler(button_handler),
             ],
         },
