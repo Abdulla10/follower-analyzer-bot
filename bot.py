@@ -2200,6 +2200,39 @@ def main():
     app.add_handler(CommandHandler("maintenance", maintenance_command))
     app.add_error_handler(error_handler)
 
+    async def post_init(application):
+        """تسجيل أوامر البوت تلقائياً عند التشغيل"""
+        from telegram import BotCommand
+        commands = [
+            BotCommand("start", "🏠 القائمة الرئيسية"),
+            BotCommand("help", "📖 المساعدة"),
+        ]
+        await application.bot.set_my_commands(commands)
+        # وصف البوت
+        await application.bot.set_my_description(
+            "🔍 بوت تحليل حسابات السوشيال ميديا\n"
+            "يحلل Instagram وTikTok ويعطيك تقرير كامل عن المتابعين ومعدل التفاعل.\n"
+            "\n"
+            "المميزات:\n"
+            "📊 تحليل الحسابات\n"
+            "🔄 مقارنة حسابين\n"
+            "🎵 معلومات TikTok\n"
+            "🔥 Username Hunt\n"
+            "⬇️ تحميل TikTok\n"
+            "🗑️ دليل الحذف\n"
+            "🔐 كاشف التسريبات\n"
+            "🌐 فاحص المواقع\n"
+            "📱 معلومات الرقم\n"
+            "🖼️ بحث عكسي بالصورة\n"
+            "🔗 مختصر الروابط"
+        )
+        await application.bot.set_my_short_description(
+            "بوت تحليل السوشيال ميديا | SocialAnalyzer 🔍"
+        )
+        print("✅ تم تسجيل أوامر البوت بنجاح")
+
+    app.post_init = post_init
+
     print("🤖 Follower Analyzer Bot يعمل الآن...")
     print("اضغط Ctrl+C للإيقاف")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
