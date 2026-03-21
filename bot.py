@@ -2165,11 +2165,19 @@ async def receive_tech_support(update: Update, context: ContextTypes.DEFAULT_TYP
         ]
 
         await loading_msg.delete()
-        await update.message.reply_text(
-            result,
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
+        # إرسال بدون parse_mode أولاً، إذا فشل نجرب بدونه
+        try:
+            await update.message.reply_text(
+                result,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+        except Exception:
+            # إذا فشل Markdown نرسل كنص عادي
+            await update.message.reply_text(
+                result,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
     except Exception as e:
         logger.error(f"خطأ في Tech Support: {e}")
         await loading_msg.edit_text(
