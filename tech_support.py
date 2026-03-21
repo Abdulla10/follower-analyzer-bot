@@ -8,7 +8,12 @@ from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI()
+# التحقق من وجود OPENAI_API_KEY
+_api_key = os.environ.get("OPENAI_API_KEY", "")
+if not _api_key:
+    logger.warning("⚠️  OPENAI_API_KEY غير موجود - المساعد التقني لن يعمل")
+
+client = OpenAI(api_key=_api_key if _api_key else "placeholder")
 
 # ===================== System Prompts لكل قسم =====================
 
@@ -94,6 +99,10 @@ def get_tech_support(user_message: str, section: str = "general", image_url: str
     Returns:
         نص الرد
     """
+    # التحقق من وجود API key
+    if not _api_key:
+        return "❌ خدمة المساعد التقني غير مفعّلة حالياً.\n\nيرجى التواصل مع المطور لتفعيلها."
+
     system_prompt = SYSTEM_PROMPTS.get(section, SYSTEM_PROMPTS["general"])
     
     try:
