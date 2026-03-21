@@ -41,6 +41,7 @@ from extra_features import (
     reverse_image_search, build_reverse_image_report,
     shorten_url, build_shorturl_report,
 )
+from tech_support import get_tech_support, get_section_from_message
 
 # ===================== الإعدادات =====================
 
@@ -121,7 +122,8 @@ logger = logging.getLogger(__name__)
     WAITING_PHONE_NUMBER,
     WAITING_REVERSE_IMAGE,
     WAITING_SHORTEN_URL,
-) = range(15)
+    WAITING_TECH_SUPPORT,
+) = range(16)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -324,6 +326,26 @@ TEXTS = {
         ),
         "shorten_loading": "⏳ جاري اختصار الرابط...",
         "shorten_again": "🔗 اختصار رابط آخر",
+        # المساعد التقني
+        "btn_tech_support": "🤖 المساعد التقني",
+        "tech_support_intro": (
+            "🤖 *المساعد التقني الذكي*\n\n"
+            "أنا خبيرك التقني الشخصي! أرسل لي:\n\n"
+            "🔧 *صورة خطأ* — سأشخصها وأحلها\n"
+            "💻 *كود* — سأحلله وأصلح أخطاءه\n"
+            "❓ *سؤال تقني* — سأجاوبك مباشرة\n"
+            "🌐 *رابط موقع* — سأحلله\n"
+            "📱 *مواصفات جهاز* — سأقيّمها\n\n"
+            "أو اختر قسماً محدداً:"
+        ),
+        "tech_section_faults": "🔧 الأعطال والمشاكل",
+        "tech_section_suggestions": "💡 اقتراحات وأدوات",
+        "tech_section_projects": "🚀 بناء المشاريع",
+        "tech_section_code": "👨‍💻 تحليل الكود",
+        "tech_section_tools": "🧰 أفضل الأدوات",
+        "tech_loading": "🤖 جاري التحليل...\n⏳ يرجى الانتظار...",
+        "tech_ask_again": "🤖 سؤال تقني آخر",
+        "tech_section_selected": "✅ تم اختيار القسم. أرسل سؤالك أو مشكلتك الآن:",
     },
     "en": {
         "welcome": (
@@ -522,6 +544,26 @@ TEXTS = {
         ),
         "shorten_loading": "⏳ Shortening URL...",
         "shorten_again": "🔗 Shorten another URL",
+        # Tech Support
+        "btn_tech_support": "🤖 Tech Support AI",
+        "tech_support_intro": (
+            "🤖 *AI Tech Support*\n\n"
+            "I'm your personal tech expert! Send me:\n\n"
+            "🔧 *Error screenshot* — I'll diagnose & fix it\n"
+            "💻 *Code* — I'll analyze & debug it\n"
+            "❓ *Tech question* — I'll answer directly\n"
+            "🌐 *Website URL* — I'll analyze it\n"
+            "📱 *Device specs* — I'll evaluate them\n\n"
+            "Or choose a specific section:"
+        ),
+        "tech_section_faults": "🔧 Faults & Issues",
+        "tech_section_suggestions": "💡 Suggestions & Tools",
+        "tech_section_projects": "🚀 Build Projects",
+        "tech_section_code": "👨‍💻 Code Analysis",
+        "tech_section_tools": "🧰 Best Tools",
+        "tech_loading": "🤖 Analyzing...\n⏳ Please wait...",
+        "tech_ask_again": "🤖 Ask another question",
+        "tech_section_selected": "✅ Section selected. Send your question or problem now:",
     }
 }
 
@@ -563,6 +605,9 @@ def get_main_keyboard(context):
         [
             InlineKeyboardButton(tx["btn_shorten"], callback_data="shorten_url"),
             InlineKeyboardButton(tx["btn_help"], callback_data="help"),
+        ],
+        [
+            InlineKeyboardButton(tx["btn_tech_support"], callback_data="tech_support"),
         ],
         [
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
@@ -997,6 +1042,40 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_SHORTEN_URL
+
+    elif data in ("tech_support", "tech_ask_again"):
+        lang = get_user_lang(context)
+        context.user_data["tech_section"] = "general"
+        keyboard = [
+            [
+                InlineKeyboardButton(TEXTS[lang]["tech_section_faults"], callback_data="tech_sec_faults"),
+                InlineKeyboardButton(TEXTS[lang]["tech_section_suggestions"], callback_data="tech_sec_suggestions"),
+            ],
+            [
+                InlineKeyboardButton(TEXTS[lang]["tech_section_projects"], callback_data="tech_sec_projects"),
+                InlineKeyboardButton(TEXTS[lang]["tech_section_code"], callback_data="tech_sec_code"),
+            ],
+            [
+                InlineKeyboardButton(TEXTS[lang]["tech_section_tools"], callback_data="tech_sec_tools"),
+            ],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back_short"], callback_data="back_main")],
+        ]
+        await query.edit_message_text(
+            t(context, "tech_support_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return WAITING_TECH_SUPPORT
+
+    elif data.startswith("tech_sec_"):
+        section = data.replace("tech_sec_", "")
+        context.user_data["tech_section"] = section
+        await query.edit_message_text(
+            t(context, "tech_section_selected"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_TECH_SUPPORT
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -2039,6 +2118,67 @@ async def receive_shorten_url(update: Update, context: ContextTypes.DEFAULT_TYPE
     return WAITING_SHORTEN_URL
 
 
+async def receive_tech_support(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """معالج استقبال أسئلة المساعد التقني - يدعم النصوص والصور"""
+    lang = get_user_lang(context)
+    section = context.user_data.get("tech_section", "general")
+
+    # رسالة التحميل
+    loading_msg = await update.message.reply_text(
+        t(context, "tech_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    try:
+        image_url = None
+        user_text = ""
+
+        # إذا كانت صورة
+        if update.message.photo:
+            photo = update.message.photo[-1]  # أعلى جودة
+            file = await context.bot.get_file(photo.file_id)
+            image_url = file.file_path
+            user_text = update.message.caption or "حلل هذه الصورة وساعدني في حل المشكلة"
+            # تخمين القسم من الـ caption
+            if section == "general" and update.message.caption:
+                section = get_section_from_message(update.message.caption)
+        elif update.message.text:
+            user_text = update.message.text.strip()
+            # تخمين القسم تلقائياً إذا كان general
+            if section == "general":
+                section = get_section_from_message(user_text)
+        else:
+            await loading_msg.edit_text(
+                "❌ أرسل نصاً أو صورة.",
+                reply_markup=get_back_keyboard(context)
+            )
+            return WAITING_TECH_SUPPORT
+
+        # الحصول على الرد من GPT
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, get_tech_support, user_text, section, image_url
+        )
+
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["tech_ask_again"], callback_data="tech_ask_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+
+        await loading_msg.delete()
+        await update.message.reply_text(
+            result,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+    except Exception as e:
+        logger.error(f"خطأ في Tech Support: {e}")
+        await loading_msg.edit_text(
+            "❌ حدث خطأ. حاول مرة أخرى.",
+            reply_markup=get_back_keyboard(context)
+        )
+
+    return WAITING_TECH_SUPPORT
+
 
 # ===================== معالج باك_ماين المستقل =====================
 
@@ -2169,6 +2309,11 @@ def main():
             ],
             WAITING_SHORTEN_URL: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_shorten_url),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_TECH_SUPPORT: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_tech_support),
+                MessageHandler(filters.PHOTO, receive_tech_support),
                 CallbackQueryHandler(button_handler),
             ],
         },
