@@ -1410,6 +1410,25 @@ async def receive_download_url(update: Update, context: ContextTypes.DEFAULT_TYP
 
                 file_size = os.path.getsize(file_path)
 
+                # تحويل الفيديو باستخدام ffmpeg لإصلاح مشكلة الشاشة السوداء
+                converted_path = os.path.join(tmpdir_to_clean, "tiktok_converted.mp4")
+                try:
+                    import subprocess
+                    ffmpeg_cmd = [
+                        "ffmpeg", "-y", "-i", file_path,
+                        "-c:v", "libx264", "-preset", "fast",
+                        "-crf", "23", "-pix_fmt", "yuv420p",
+                        "-c:a", "aac", "-b:a", "128k",
+                        "-movflags", "+faststart",
+                        converted_path
+                    ]
+                    proc = subprocess.run(ffmpeg_cmd, capture_output=True, timeout=120)
+                    if proc.returncode == 0 and os.path.exists(converted_path):
+                        file_path = converted_path
+                        file_size = os.path.getsize(file_path)
+                except Exception as fe:
+                    logger.warning(f"ffmpeg تحويل فشل: {fe} — سيتم إرسال الملف الأصلي")
+
                 if file_size > 50 * 1024 * 1024:
                     await loading_msg.edit_text(
                         t(context, "too_large"),
