@@ -1344,7 +1344,9 @@ def download_tiktok(url: str) -> dict:
         data = r.json()
         if data.get("code") == 0:
             video_data = data.get("data", {})
-            video_url = video_data.get("hdplay") or video_data.get("play")
+            # نستخدم play أولاً لأن hdplay قد يكون bvc2 (codec خاص بـ TikTok لا يدعمه Telegram)
+            # play دائماً H.264 القياسي المدعوم على جميع الأجهزة
+            video_url = video_data.get("play") or video_data.get("hdplay")
             title = video_data.get("title", "TikTok Video")
             duration = video_data.get("duration", 0)
             return {
