@@ -41,6 +41,10 @@ from extra_features import (
     reverse_image_search, build_reverse_image_report,
     shorten_url, build_shorturl_report,
 )
+from osint_engine import (
+    osint_phone, build_osint_phone_report,
+    analyze_fake_account, build_fake_detector_report,
+)
 
 # ===================== الإعدادات =====================
 
@@ -121,7 +125,10 @@ logger = logging.getLogger(__name__)
     WAITING_PHONE_NUMBER,
     WAITING_REVERSE_IMAGE,
     WAITING_SHORTEN_URL,
-) = range(15)
+    WAITING_OSINT_PHONE,
+    WAITING_FAKE_PLATFORM,
+    WAITING_FAKE_USERNAME,
+) = range(18)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -324,6 +331,33 @@ TEXTS = {
         ),
         "shorten_loading": "⏳ جاري اختصار الرابط...",
         "shorten_again": "🔗 اختصار رابط آخر",
+        # OSINT Phone
+        "btn_osint_phone": "🔍 OSINT الرقم",
+        "osint_phone_intro": (
+            "🔍 *محرك الاستخبارات الرقمية — OSINT للأرقام*\n\n"
+            "أرسل رقم الجوال بالصيغة الدولية وسأجري تحليلاً شاملاً:\n\n"
+            "🔐 فحص التسريبات\n"
+            "💬 رابط واتساب المباشر\n"
+            "🗺️ الموقع الجغرافي التقريبي\n"
+            "📅 تقدير تاريخ التسجيل\n\n"
+            "💡 مثال: `+966501234567`"
+        ),
+        "osint_phone_loading": "🔍 جاري تحليل الرقم بمحرك OSINT...",
+        "osint_phone_again": "🔍 تحليل رقم آخر",
+        # Fake Detector
+        "btn_fake_detector": "🕵️ كاشف المزيف",
+        "fake_detector_intro": (
+            "🕵️ *كاشف الحسابات المزيفة*\n\n"
+            "يحلل الحساب ويعطيك نسبة احتمال أنه مزيف بناءً على:\n\n"
+            "📊 معدل التفاعل\n"
+            "👥 نسبة المتابعين/المتابَعين\n"
+            "📝 نشاط الحساب\n"
+            "🔢 نمط اسم المستخدم\n\n"
+            "اختر المنصة:"
+        ),
+        "fake_detector_loading": "🕵️ جاري تحليل الحساب...",
+        "fake_detector_again": "🕵️ تحليل حساب آخر",
+        "fake_send_username": "أرسل اسم المستخدم للحساب الذي تريد فحصه:",
     },
     "en": {
         "welcome": (
@@ -522,6 +556,33 @@ TEXTS = {
         ),
         "shorten_loading": "⏳ Shortening URL...",
         "shorten_again": "🔗 Shorten another URL",
+        # OSINT Phone
+        "btn_osint_phone": "🔍 OSINT Phone",
+        "osint_phone_intro": (
+            "🔍 *Digital Intelligence Engine — Phone OSINT*\n\n"
+            "Send a phone number in international format for a full analysis:\n\n"
+            "🔐 Breach check\n"
+            "💬 Direct WhatsApp link\n"
+            "🗺️ Approximate geographic location\n"
+            "📅 Registration date estimate\n\n"
+            "💡 Example: `+966501234567`"
+        ),
+        "osint_phone_loading": "🔍 Analyzing number with OSINT engine...",
+        "osint_phone_again": "🔍 Analyze another number",
+        # Fake Detector
+        "btn_fake_detector": "🕵️ Fake Detector",
+        "fake_detector_intro": (
+            "🕵️ *Fake Account Detector*\n\n"
+            "Analyzes the account and gives you a fake probability score based on:\n\n"
+            "📊 Engagement rate\n"
+            "👥 Followers/Following ratio\n"
+            "📝 Account activity\n"
+            "🔢 Username pattern\n\n"
+            "Choose platform:"
+        ),
+        "fake_detector_loading": "🕵️ Analyzing account...",
+        "fake_detector_again": "🕵️ Analyze another account",
+        "fake_send_username": "Send the username of the account you want to check:",
     }
 }
 
@@ -563,6 +624,10 @@ def get_main_keyboard(context):
         [
             InlineKeyboardButton(tx["btn_shorten"], callback_data="shorten_url"),
             InlineKeyboardButton(tx["btn_help"], callback_data="help"),
+        ],
+        [
+            InlineKeyboardButton(tx["btn_osint_phone"], callback_data="osint_phone"),
+            InlineKeyboardButton(tx["btn_fake_detector"], callback_data="fake_detector"),
         ],
         [
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
@@ -997,6 +1062,39 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_SHORTEN_URL
+
+    elif data in ("osint_phone", "osint_phone_again"):
+        await query.edit_message_text(
+            t(context, "osint_phone_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_OSINT_PHONE
+
+    elif data in ("fake_detector", "fake_detector_again"):
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton("📸 Instagram", callback_data="fake_platform_instagram"),
+             InlineKeyboardButton("🎵 TikTok", callback_data="fake_platform_tiktok")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back_short"], callback_data="back_main")],
+        ]
+        await query.edit_message_text(
+            t(context, "fake_detector_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return WAITING_FAKE_PLATFORM
+
+    elif data.startswith("fake_platform_"):
+        platform = data.replace("fake_platform_", "")
+        context.user_data["fake_platform"] = platform
+        platform_name = "Instagram 📸" if platform == "instagram" else "TikTok 🎵"
+        await query.edit_message_text(
+            f"🕵️ *{platform_name}*\n\n{t(context, 'fake_send_username')}",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_FAKE_USERNAME
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -2191,6 +2289,17 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_shorten_url),
                 CallbackQueryHandler(button_handler),
             ],
+            WAITING_OSINT_PHONE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_osint_phone),
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_FAKE_PLATFORM: [
+                CallbackQueryHandler(button_handler),
+            ],
+            WAITING_FAKE_USERNAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_fake_username),
+                CallbackQueryHandler(button_handler),
+            ],
         },
         fallbacks=[
             CommandHandler("start", start),
@@ -2257,6 +2366,65 @@ def main():
     print("🤖 Follower Analyzer Bot يعمل الآن...")
     print("اضغط Ctrl+C للإيقاف")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+
+async def receive_osint_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """handler لمحرك OSINT للأرقام"""
+    phone = update.message.text.strip()
+    loading_msg = await update.message.reply_text(
+        t(context, "osint_phone_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(None, osint_phone, phone)
+        report = build_osint_phone_report(result, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["osint_phone_again"], callback_data="osint_phone_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+    except Exception as e:
+        logger.error(f"خطأ في OSINT Phone: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_OSINT_PHONE
+
+
+async def receive_fake_username(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """handler لكاشف الحسابات المزيفة"""
+    username = update.message.text.strip().lstrip('@')
+    platform = context.user_data.get("fake_platform", "instagram")
+
+    loading_msg = await update.message.reply_text(
+        t(context, "fake_detector_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, analyze_fake_account, username, platform
+        )
+        report = build_fake_detector_report(result, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["fake_detector_again"], callback_data="fake_detector_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+    except Exception as e:
+        logger.error(f"خطأ في Fake Detector: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_FAKE_USERNAME
 
 
 if __name__ == "__main__":
