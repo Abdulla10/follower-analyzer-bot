@@ -2489,9 +2489,9 @@ async def receive_fake_username(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def receive_tiktok_views_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """handler لزيادة مشاهدات TikTok"""
-    SMMACT_API_KEY = "af3aa654fc0a0acb44bfc9eba8ebfa5c"
-    SMMACT_API_URL = "https://smmact.com/api/v2"
-    TIKTOK_VIEWS_SERVICE_ID = 31448  # TikTok Video Views | HQ | Instant | 0.0045$/1000
+    SMMACT_API_KEY = "6e296489ea375c4cd4b8feac7aa8bf6b"
+    SMMACT_API_URL = "https://marketerum.com/api/v2"
+    TIKTOK_VIEWS_SERVICE_ID = 2562  # TikTok Views | HQ | Instant | ~500M/Day | 0.0108$/1000
     VIEWS_QUANTITY = 5000
 
     url = update.message.text.strip()
