@@ -128,7 +128,8 @@ logger = logging.getLogger(__name__)
     WAITING_OSINT_PHONE,
     WAITING_FAKE_PLATFORM,
     WAITING_FAKE_USERNAME,
-) = range(18)
+    WAITING_TIKTOK_VIEWS_URL,
+) = range(19)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -358,6 +359,28 @@ TEXTS = {
         "fake_detector_loading": "🕵️ جاري تحليل الحساب...",
         "fake_detector_again": "🕵️ تحليل حساب آخر",
         "fake_send_username": "أرسل اسم المستخدم للحساب الذي تريد فحصه:",
+        # TikTok Views
+        "btn_tiktok_views": "👁️ مشاهدات TikTok",
+        "tiktok_views_intro": (
+            "👁️ *زيادة مشاهدات TikTok*\n\n"
+            "أرسل رابط الفيديو وسأضيف له *5,000 مشاهدة* فوراً.\n\n"
+            "✅ سريع وفوري\n"
+            "✅ آمن  100%\n"
+            "✅ بدون كلمة مرور\n\n"
+            "💡 مثال:\n"
+            "`https://www.tiktok.com/@user/video/123456`\n\n"
+            "⚠️ تأكد أن الفيديو *عام* وليس خاص"
+        ),
+        "tiktok_views_loading": "⏳ جاري إرسال المشاهدات...",
+        "tiktok_views_success": (
+            "✅ *تم إرسال الطلب بنجاح!*\n\n"
+            "👁️ الكمية: *5,000 مشاهدة*\n"
+            "🔢 رقم الطلب: `{order_id}`\n\n"
+            "⏰ ستبدأ المشاهدات خلال دقائق."
+        ),
+        "tiktok_views_fail": "❌ فشل إرسال الطلب. تأكد أن الرابط صحيح والفيديو عام.",
+        "tiktok_views_again": "👁️ زيادة فيديو آخر",
+        "tiktok_views_invalid": "⚠️ الرابط غير صحيح. أرسل رابط فيديو TikTok صحيح.",
     },
     "en": {
         "welcome": (
@@ -583,6 +606,28 @@ TEXTS = {
         "fake_detector_loading": "🕵️ Analyzing account...",
         "fake_detector_again": "🕵️ Analyze another account",
         "fake_send_username": "Send the username of the account you want to check:",
+        # TikTok Views
+        "btn_tiktok_views": "👁️ TikTok Views",
+        "tiktok_views_intro": (
+            "👁️ *Boost TikTok Views*\n\n"
+            "Send a video link and I'll add *5,000 views* instantly.\n\n"
+            "✅ Fast & instant\n"
+            "✅ 100% safe\n"
+            "✅ No password needed\n\n"
+            "💡 Example:\n"
+            "`https://www.tiktok.com/@user/video/123456`\n\n"
+            "⚠️ Make sure the video is *public*"
+        ),
+        "tiktok_views_loading": "⏳ Sending views...",
+        "tiktok_views_success": (
+            "✅ *Order placed successfully!*\n\n"
+            "👁️ Quantity: *5,000 views*\n"
+            "🔢 Order ID: `{order_id}`\n\n"
+            "⏰ Views will start within minutes."
+        ),
+        "tiktok_views_fail": "❌ Order failed. Make sure the link is correct and the video is public.",
+        "tiktok_views_again": "👁️ Boost another video",
+        "tiktok_views_invalid": "⚠️ Invalid link. Please send a valid TikTok video link.",
     }
 }
 
@@ -628,6 +673,9 @@ def get_main_keyboard(context):
         [
             InlineKeyboardButton(tx["btn_osint_phone"], callback_data="osint_phone"),
             InlineKeyboardButton(tx["btn_fake_detector"], callback_data="fake_detector"),
+        ],
+        [
+            InlineKeyboardButton(tx["btn_tiktok_views"], callback_data="tiktok_views"),
         ],
         [
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
@@ -1095,6 +1143,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_FAKE_USERNAME
+
+    elif data in ("tiktok_views", "tiktok_views_again"):
+        await query.edit_message_text(
+            t(context, "tiktok_views_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_TIKTOK_VIEWS_URL
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -2300,6 +2356,10 @@ def main():
                 MessageHandler(filters.TEXT & ~filters.COMMAND, receive_fake_username),
                 CallbackQueryHandler(button_handler),
             ],
+            WAITING_TIKTOK_VIEWS_URL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_tiktok_views_url),
+                CallbackQueryHandler(button_handler),
+            ],
         },
         fallbacks=[
             CommandHandler("start", start),
@@ -2425,6 +2485,74 @@ async def receive_fake_username(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"خطأ في Fake Detector: {e}")
         await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
     return WAITING_FAKE_USERNAME
+
+
+async def receive_tiktok_views_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """handler لزيادة مشاهدات TikTok"""
+    SMMACT_API_KEY = "af3aa654fc0a0acb44bfc9eba8ebfa5c"
+    SMMACT_API_URL = "https://smmact.com/api/v2"
+    TIKTOK_VIEWS_SERVICE_ID = 31448  # TikTok Video Views | HQ | Instant | 0.0045$/1000
+    VIEWS_QUANTITY = 5000
+
+    url = update.message.text.strip()
+
+    # التحقق من صحة الرابط
+    if "tiktok.com" not in url and "vm.tiktok.com" not in url:
+        await update.message.reply_text(
+            t(context, "tiktok_views_invalid"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_TIKTOK_VIEWS_URL
+
+    loading_msg = await update.message.reply_text(
+        t(context, "tiktok_views_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
+    try:
+        def send_order():
+            payload = {
+                "key": SMMACT_API_KEY,
+                "action": "add",
+                "service": TIKTOK_VIEWS_SERVICE_ID,
+                "link": url,
+                "quantity": VIEWS_QUANTITY,
+            }
+            r = requests.post(SMMACT_API_URL, data=payload, timeout=15)
+            return r.json()
+
+        result = await asyncio.get_event_loop().run_in_executor(None, send_order)
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["tiktok_views_again"], callback_data="tiktok_views_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+
+        if "order" in result:
+            order_id = result["order"]
+            await loading_msg.delete()
+            await update.message.reply_text(
+                t(context, "tiktok_views_success", order_id=order_id),
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+        else:
+            error = result.get("error", "Unknown error")
+            logger.error(f"خطأ smmact: {error}")
+            await loading_msg.edit_text(
+                t(context, "tiktok_views_fail"),
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+            )
+    except Exception as e:
+        logger.error(f"خطأ في TikTok Views: {e}")
+        await loading_msg.edit_text(
+            t(context, "tiktok_views_fail"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+    return WAITING_TIKTOK_VIEWS_URL
 
 
 if __name__ == "__main__":
