@@ -130,7 +130,7 @@ logger = logging.getLogger(__name__)
     WAITING_FAKE_USERNAME,
     WAITING_TIKTOK_VIEWS_URL,
     WAITING_SNAP_CONVERT,
-) = range(19)
+) = range(20)
 
 
 # ===================== النصوص ثنائية اللغة =====================
