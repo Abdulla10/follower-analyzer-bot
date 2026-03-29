@@ -2327,6 +2327,10 @@ def main():
         states={
             MAIN_MENU: [
                 CallbackQueryHandler(button_handler),
+                MessageHandler(
+                    (filters.VIDEO | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND,
+                    receive_snap_convert
+                ),
                 CommandHandler("help", help_command),
                 CommandHandler("stats", stats_command),
                 CommandHandler("broadcast", broadcast_command),
@@ -2557,6 +2561,10 @@ def main():
             CommandHandler("maintenance", maintenance_command),
             CommandHandler("help", help_command),
             MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_message),
+            MessageHandler(
+                (filters.VIDEO | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND,
+                receive_snap_convert
+            ),
         ],
         allow_reentry=True,
     )
