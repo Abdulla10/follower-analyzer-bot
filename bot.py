@@ -50,6 +50,7 @@ from osint_engine import (
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+CHANNEL_USERNAME = "@IEEEBIF"  # قناة التيليغرام
 
 # ===================== نظام الإحصائيات =====================
 
@@ -68,10 +69,11 @@ def save_stats(stats: dict):
     with open(STATS_FILE, "w", encoding="utf-8") as f:
         json.dump(stats, f, ensure_ascii=False, indent=2)
 
-def register_user(user_id: int, username: str, full_name: str):
+def register_user(user_id: int, username: str, full_name: str, referred_by: int = None):
     stats = load_stats()
     uid = str(user_id)
-    if uid not in stats["users"]:
+    is_new = uid not in stats["users"]
+    if is_new:
         stats["users"][uid] = {
             "username": username or "",
             "full_name": full_name or "",
@@ -79,8 +81,21 @@ def register_user(user_id: int, username: str, full_name: str):
             "analyses": 0,
             "comparisons": 0,
             "lang": "ar",
+            "referrals": 0,
+            "referred_by": str(referred_by) if referred_by else None,
         }
+        # زيادة عداد الإحالات للمُحيل
+        if referred_by:
+            ref_uid = str(referred_by)
+            if ref_uid in stats["users"]:
+                stats["users"][ref_uid]["referrals"] = stats["users"][ref_uid].get("referrals", 0) + 1
     save_stats(stats)
+    return is_new
+
+def get_referral_count(user_id: int) -> int:
+    stats = load_stats()
+    uid = str(user_id)
+    return stats["users"].get(uid, {}).get("referrals", 0)
 
 def get_user_lang(context: ContextTypes.DEFAULT_TYPE) -> str:
     """الحصول على لغة المستخدم من user_data"""
@@ -171,6 +186,18 @@ TEXTS = {
         "btn_back": "🔙 القائمة الرئيسية",
         "btn_back_short": "🔙 رجوع",
         "btn_lang": "🌐 English",
+        "btn_referral": "🎁 دعوة الأصدقاء",
+        "referral_text": (
+            "🎁 *نظام الإحالة*\n\n"
+            "شارك رابط البوت مع أصدقائك واحصل على إحصائياتك!\n\n"
+            "🔗 *رابطك الخاص:*\n"
+            "`{link}`\n\n"
+            "👥 *عدد من دعوتهم:* `{count}` شخص\n\n"
+            "📢 *تابع قناتنا للتحديثات:*\n"
+            "@IEEEBIF"
+        ),
+        "referral_notify": "🎉 شخص جديد انضم للبوت عبر رابطك! إجمالي إحالاتك: `{count}`",
+        "channel_join": "📢 قناة البوت",
         "btn_analyze_another": "🔍 تحليل حساب آخر",
         "btn_compare_short": "🔄 مقارنة",
         "btn_home": "🏠 القائمة الرئيسية",
@@ -419,6 +446,18 @@ TEXTS = {
         "btn_back": "🔙 Main Menu",
         "btn_back_short": "🔙 Back",
         "btn_lang": "🌐 العربية",
+        "btn_referral": "🎁 Invite Friends",
+        "referral_text": (
+            "🎁 *Referral System*\n\n"
+            "Share your bot link with friends and track your invites!\n\n"
+            "🔗 *Your unique link:*\n"
+            "`{link}`\n\n"
+            "👥 *People you invited:* `{count}`\n\n"
+            "📢 *Follow our channel for updates:*\n"
+            "@IEEEBIF"
+        ),
+        "referral_notify": "🎉 Someone joined via your link! Total referrals: `{count}`",
+        "channel_join": "📢 Bot Channel",
         "btn_analyze_another": "🔍 Analyze Another",
         "btn_compare_short": "🔄 Compare",
         "btn_home": "🏠 Main Menu",
@@ -678,8 +717,10 @@ def get_main_keyboard(context):
         ],
         [
             InlineKeyboardButton(tx["btn_tiktok_views"], callback_data="tiktok_views"),
+            InlineKeyboardButton(tx["btn_referral"], callback_data="referral"),
         ],
         [
+            InlineKeyboardButton(tx["channel_join"], url="https://t.me/IEEEBIF"),
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
         ],
     ]
@@ -762,7 +803,34 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         lang = context.user_data.get("lang", "ar")
         await update.message.reply_text(TEXTS[lang]["banned"])
         return MAIN_MENU
-    register_user(user.id, user.username, user.full_name)
+    # استخراج معرف المُحيل من الرابط
+    referred_by = None
+    if context.args:
+        arg = context.args[0]
+        if arg.startswith("ref_"):
+            try:
+                referred_by = int(arg.replace("ref_", ""))
+                if referred_by == user.id:
+                    referred_by = None  # لا يحيل نفسه
+            except:
+                referred_by = None
+
+    is_new = register_user(user.id, user.username, user.full_name, referred_by)
+
+    # إشعار المُحيل بمستخدم جديد
+    if is_new and referred_by:
+        try:
+            ref_count = get_referral_count(referred_by)
+            ref_lang = load_stats()["users"].get(str(referred_by), {}).get("lang", "ar")
+            notify_text = TEXTS[ref_lang]["referral_notify"].format(count=ref_count)
+            await context.bot.send_message(
+                chat_id=referred_by,
+                text=notify_text,
+                parse_mode=ParseMode.MARKDOWN,
+            )
+        except:
+            pass
+
     # تعيين اللغة الافتراضية إذا لم تكن محددة
     if "lang" not in context.user_data:
         context.user_data["lang"] = "ar"
@@ -1153,6 +1221,26 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_TIKTOK_VIEWS_URL
+
+    # نظام الإحالة
+    elif data == "referral":
+        user = update.effective_user
+        bot_username = (await context.bot.get_me()).username
+        ref_link = f"https://t.me/{bot_username}?start=ref_{user.id}"
+        count = get_referral_count(user.id)
+        lang = get_user_lang(context)
+        text = TEXTS[lang]["referral_text"].format(link=ref_link, count=count)
+        keyboard = [
+            [InlineKeyboardButton("📢 قناة البوت", url="https://t.me/IEEEBIF")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await query.edit_message_text(
+            text,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            disable_web_page_preview=True,
+        )
+        return MAIN_MENU
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
