@@ -129,8 +129,7 @@ logger = logging.getLogger(__name__)
     WAITING_FAKE_PLATFORM,
     WAITING_FAKE_USERNAME,
     WAITING_TIKTOK_VIEWS_URL,
-    WAITING_SNAP_CONVERT,
-) = range(20)
+) = range(19)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -382,20 +381,7 @@ TEXTS = {
         "tiktok_views_fail": "❌ فشل إرسال الطلب. تأكد أن الرابط صحيح والفيديو عام.",
         "tiktok_views_again": "👁️ زيادة فيديو آخر",
         "tiktok_views_invalid": "⚠️ الرابط غير صحيح. أرسل رابط فيديو TikTok صحيح.",
-        "btn_snap_convert": "👻 تحويل لـ Snapchat",
-        "snap_convert_intro": (
-            "👻 *تحويل للسناب شات*\n\n"
-            "أرسل فيديو أو صورة وسأحوّلها تلقائياً لمواصفات Snapchat:\n\n"
-            "🎬 *الفيديو:* 1080×1920 | 9:16 | MP4 | أقصاه 60 ثانية\n"
-            "🖼️ *الصورة:* 1080×1920 | 9:16 | JPEG\n\n"
-            "📤 أرسل الملف الآن:"
-        ),
-        "snap_converting": "⏳ جاري التحويل لمواصفات Snapchat...",
-        "snap_convert_done_video": "✅ *تم التحويل!*\n\n👻 الفيديو جاهز للرفع على Snapchat.",
-        "snap_convert_done_image": "✅ *تم التحويل!*\n\n👻 الصورة جاهزة للرفع على Snapchat.",
-        "snap_convert_fail": "❌ فشل التحويل. تأكد أن الملف صحيح وحاول مرة أخرى.",
-        "snap_convert_again": "👻 تحويل ملف آخر",
-        "snap_invalid_file": "⚠️ أرسل فيديو أو صورة فقط.",
+
     },
     "en": {
         "welcome": (
@@ -643,20 +629,7 @@ TEXTS = {
         "tiktok_views_fail": "❌ Order failed. Make sure the link is correct and the video is public.",
         "tiktok_views_again": "👁️ Boost another video",
         "tiktok_views_invalid": "⚠️ Invalid link. Please send a valid TikTok video link.",
-        "btn_snap_convert": "👻 Snapchat Converter",
-        "snap_convert_intro": (
-            "👻 *Snapchat Converter*\n\n"
-            "Send a video or image and I'll convert it to Snapchat specs:\n\n"
-            "🎬 *Video:* 1080×1920 | 9:16 | MP4 | max 60 seconds\n"
-            "🖼️ *Image:* 1080×1920 | 9:16 | JPEG\n\n"
-            "📤 Send the file now:"
-        ),
-        "snap_converting": "⏳ Converting to Snapchat specs...",
-        "snap_convert_done_video": "✅ *Done!*\n\n👻 Video is ready to upload on Snapchat.",
-        "snap_convert_done_image": "✅ *Done!*\n\n👻 Image is ready to upload on Snapchat.",
-        "snap_convert_fail": "❌ Conversion failed. Make sure the file is valid and try again.",
-        "snap_convert_again": "👻 Convert another file",
-        "snap_invalid_file": "⚠️ Please send a video or image only.",
+
     }
 }
 
@@ -705,7 +678,6 @@ def get_main_keyboard(context):
         ],
         [
             InlineKeyboardButton(tx["btn_tiktok_views"], callback_data="tiktok_views"),
-            InlineKeyboardButton(tx["btn_snap_convert"], callback_data="snap_convert"),
         ],
         [
             InlineKeyboardButton(tx["btn_lang"], callback_data="switch_lang"),
@@ -1181,14 +1153,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_TIKTOK_VIEWS_URL
-
-    elif data in ("snap_convert", "snap_convert_again"):
-        await query.edit_message_text(
-            t(context, "snap_convert_intro"),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(context),
-        )
-        return WAITING_SNAP_CONVERT
 
     # اختيار المنصة للتحليل
     elif data.startswith("platform_analyze_"):
@@ -2327,10 +2291,6 @@ def main():
         states={
             MAIN_MENU: [
                 CallbackQueryHandler(button_handler),
-                MessageHandler(
-                    (filters.VIDEO | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND,
-                    receive_snap_convert
-                ),
                 CommandHandler("help", help_command),
                 CommandHandler("stats", stats_command),
                 CommandHandler("broadcast", broadcast_command),
@@ -2535,20 +2495,6 @@ def main():
                 CommandHandler("topusers", topusers_command),
                 CommandHandler("maintenance", maintenance_command),
             ],
-            WAITING_SNAP_CONVERT: [
-                MessageHandler(
-                    (filters.VIDEO | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND,
-                    receive_snap_convert
-                ),
-                CallbackQueryHandler(button_handler),
-                CommandHandler("stats", stats_command),
-                CommandHandler("broadcast", broadcast_command),
-                CommandHandler("ban", ban_command),
-                CommandHandler("unban", unban_command),
-                CommandHandler("users", users_command),
-                CommandHandler("topusers", topusers_command),
-                CommandHandler("maintenance", maintenance_command),
-            ],
         },
         fallbacks=[
             CommandHandler("start", start),
@@ -2561,10 +2507,6 @@ def main():
             CommandHandler("maintenance", maintenance_command),
             CommandHandler("help", help_command),
             MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_message),
-            MessageHandler(
-                (filters.VIDEO | filters.PHOTO | filters.Document.ALL) & ~filters.COMMAND,
-                receive_snap_convert
-            ),
         ],
         allow_reentry=True,
     )
@@ -2746,117 +2688,6 @@ async def receive_tiktok_views_url(update: Update, context: ContextTypes.DEFAULT
             reply_markup=get_back_keyboard(context),
         )
     return WAITING_TIKTOK_VIEWS_URL
-
-
-async def receive_snap_convert(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """تحويل الفيديو أو الصورة لمواصفات Snapchat"""
-    lang = get_user_lang(context)
-    keyboard = [
-        [InlineKeyboardButton(TEXTS[lang]["snap_convert_again"], callback_data="snap_convert_again")],
-        [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
-    ]
-
-    # التحقق من نوع الملف
-    video = update.message.video or update.message.document
-    photo = update.message.photo
-
-    if not video and not photo:
-        await update.message.reply_text(
-            t(context, "snap_invalid_file"),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=get_back_keyboard(context),
-        )
-        return WAITING_SNAP_CONVERT
-
-    loading_msg = await update.message.reply_text(
-        t(context, "snap_converting"),
-        parse_mode=ParseMode.MARKDOWN,
-    )
-
-    try:
-        import subprocess
-        with tempfile.TemporaryDirectory() as tmpdir:
-            if video:
-                # تحميل الفيديو
-                file = await context.bot.get_file(video.file_id)
-                input_path = os.path.join(tmpdir, "input.mp4")
-                await file.download_to_drive(input_path)
-                output_path = os.path.join(tmpdir, "snapchat.mp4")
-
-                # تحويل الفيديو: 1080x1920، 9:16، H.264، max 60s
-                cmd = [
-                    "ffmpeg", "-y",
-                    "-i", input_path,
-                    "-t", "60",
-                    "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
-                    "-c:v", "libx264",
-                    "-preset", "fast",
-                    "-crf", "23",
-                    "-pix_fmt", "yuv420p",
-                    "-c:a", "aac",
-                    "-b:a", "128k",
-                    "-movflags", "+faststart",
-                    output_path
-                ]
-                proc = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: subprocess.run(cmd, capture_output=True, timeout=120)
-                )
-
-                if proc.returncode != 0 or not os.path.exists(output_path):
-                    raise Exception(f"ffmpeg error: {proc.stderr.decode()[:200]}")
-
-                await loading_msg.delete()
-                with open(output_path, "rb") as f:
-                    await update.message.reply_video(
-                        video=f,
-                        caption=t(context, "snap_convert_done_video"),
-                        parse_mode=ParseMode.MARKDOWN,
-                        reply_markup=InlineKeyboardMarkup(keyboard),
-                    )
-
-            elif photo:
-                # تحميل الصورة (أعلى جودة)
-                file = await context.bot.get_file(photo[-1].file_id)
-                input_path = os.path.join(tmpdir, "input.jpg")
-                await file.download_to_drive(input_path)
-                output_path = os.path.join(tmpdir, "snapchat.jpg")
-
-                # تحويل الصورة: 1080x1920، 9:16
-                cmd = [
-                    "ffmpeg", "-y",
-                    "-i", input_path,
-                    "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black",
-                    "-q:v", "2",
-                    output_path
-                ]
-                proc = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: subprocess.run(cmd, capture_output=True, timeout=60)
-                )
-
-                if proc.returncode != 0 or not os.path.exists(output_path):
-                    raise Exception(f"ffmpeg error: {proc.stderr.decode()[:200]}")
-
-                await loading_msg.delete()
-                with open(output_path, "rb") as f:
-                    await update.message.reply_document(
-                        document=f,
-                        filename="snapchat.jpg",
-                        caption=t(context, "snap_convert_done_image"),
-                        parse_mode=ParseMode.MARKDOWN,
-                        reply_markup=InlineKeyboardMarkup(keyboard),
-                    )
-
-    except Exception as e:
-        logger.error(f"خطأ في تحويل Snapchat: {e}")
-        await loading_msg.edit_text(
-            t(context, "snap_convert_fail"),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
-
-    return WAITING_SNAP_CONVERT
 
 
 if __name__ == "__main__":
