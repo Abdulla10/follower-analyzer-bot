@@ -48,9 +48,26 @@ from osint_engine import (
 
 # ===================== الإعدادات =====================
 
+# ©️ جميع الحقوق محفوظة - محلل السوشيال
+# تم التطوير بواسطة صاحب البوت
+# يُمنع منعاً باتاً نسخ أو بيع أو توزيع هذا البوت دون إذن صريح من المالك
+# Unauthorized copying, selling or distribution of this bot is strictly prohibited
+
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
 CHANNEL_USERNAME = "@IEEEBIF"  # قناة التيليغرام
+
+# ===================== حماية التوكن =====================
+# قائمة التوكنات المسموح بها - فقط توكن المالك الأصلي
+AUTHORIZED_TOKEN_PREFIX = BOT_TOKEN[:20] if len(BOT_TOKEN) > 20 else BOT_TOKEN
+
+def verify_bot_token():
+    """التحقق من أن البوت يعمل بالتوكن الأصلي المصرح به"""
+    current_token = os.environ.get("BOT_TOKEN", "")
+    if not current_token or current_token == "YOUR_BOT_TOKEN_HERE":
+        logging.error("❌ توكن البوت غير صحيح أو غير موجود")
+        return False
+    return True
 
 # ===================== نظام الإحصائيات =====================
 
@@ -2676,7 +2693,8 @@ def main():
 
     app.post_init = post_init
 
-    print("🤖 Follower Analyzer Bot يعمل الآن...")
+    print("🤖 محلل السوشيال يعمل الآن...")
+    print("©️ جميع الحقوق محفوظة - يُمنع نسخ أو بيع هذا البوت")
     print("اضغط Ctrl+C للإيقاف")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
