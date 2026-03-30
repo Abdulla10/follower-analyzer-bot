@@ -44,6 +44,7 @@ from extra_features import (
 from osint_engine import (
     osint_phone, build_osint_phone_report,
     analyze_fake_account, build_fake_detector_report,
+    ai_fake_followers_analysis, build_ai_fake_followers_report,
 )
 
 # ===================== الإعدادات =====================
@@ -161,7 +162,9 @@ logger = logging.getLogger(__name__)
     WAITING_FAKE_PLATFORM,
     WAITING_FAKE_USERNAME,
     WAITING_TIKTOK_VIEWS_URL,
-) = range(19)
+    WAITING_AI_FAKE_PLATFORM,
+    WAITING_AI_FAKE_USERNAME,
+) = range(21)
 
 
 # ===================== النصوص ثنائية اللغة =====================
@@ -440,6 +443,20 @@ TEXTS = {
         "tiktok_views_fail": "❌ فشل إرسال الطلب. تأكد أن الرابط صحيح والفيديو عام.",
         "tiktok_views_again": "👁️ زيادة فيديو آخر",
         "tiktok_views_invalid": "⚠️ الرابط غير صحيح. أرسل رابط فيديو TikTok صحيح.",
+        # AI Fake Followers
+        "btn_ai_fake": "🤖 كاشف الفيك فولوورز AI",
+        "ai_fake_intro": (
+            "🤖 *كاشف الفيك فولوورز بالذكاء الاصطناعي*\n\n"
+            "يحلل أي حساب ويعطيك:\n\n"
+            "🟩 نسبة المتابعين الحقيقيين\n"
+            "⬜️ نسبة غير النشطين\n"
+            "🟥 نسبة المزيفين\n\n"
+            "مدعوم بـ GPT-4 للدقة القصوى 🎯\n\n"
+            "اختر المنصة:"
+        ),
+        "ai_fake_send_username": "أرسل اسم المستخدم للحساب الذي تريد تحليله:",
+        "ai_fake_loading": "🤖 جاري التحليل بالذكاء الاصطناعي...\n\n⏳ قد يستغرق 15-20 ثانية",
+        "ai_fake_again": "🤖 تحليل حساب آخر",
 
     },
     "en": {
@@ -715,8 +732,22 @@ TEXTS = {
         "tiktok_views_fail": "❌ Order failed. Make sure the link is correct and the video is public.",
         "tiktok_views_again": "👁️ Boost another video",
         "tiktok_views_invalid": "⚠️ Invalid link. Please send a valid TikTok video link.",
+        # AI Fake Followers
+        "btn_ai_fake": "🤖 AI Fake Followers Detector",
+        "ai_fake_intro": (
+            "🤖 *AI Fake Followers Detector*\n\n"
+            "Analyzes any account and gives you:\n\n"
+            "🟩 Real followers percentage\n"
+            "⬜️ Inactive followers percentage\n"
+            "🟥 Fake followers percentage\n\n"
+            "Powered by GPT-4 for maximum accuracy 🎯\n\n"
+            "Choose platform:"
+        ),
+        "ai_fake_send_username": "Send the username of the account you want to analyze:",
+        "ai_fake_loading": "🤖 Analyzing with AI...\n\n⏳ This may take 15-20 seconds",
+        "ai_fake_again": "🤖 Analyze Another Account",
 
-    }
+    },
 }
 
 def t(context, key: str, **kwargs) -> str:
@@ -764,6 +795,9 @@ def get_main_keyboard(context):
         ],
         [
             InlineKeyboardButton(tx["btn_tiktok_views"], callback_data="tiktok_views"),
+            InlineKeyboardButton(tx["btn_ai_fake"], callback_data="ai_fake"),
+        ],
+        [
             InlineKeyboardButton(tx["btn_referral"], callback_data="referral"),
         ],
         [
@@ -1268,6 +1302,32 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             reply_markup=get_back_keyboard(context),
         )
         return WAITING_TIKTOK_VIEWS_URL
+
+    # كاشف الفيك فولوورز بالذكاء الاصطناعي
+    elif data in ("ai_fake", "ai_fake_again"):
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton("📸 Instagram", callback_data="ai_fake_platform_instagram"),
+             InlineKeyboardButton("🎵 TikTok", callback_data="ai_fake_platform_tiktok")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back_short"], callback_data="back_main")],
+        ]
+        await query.edit_message_text(
+            t(context, "ai_fake_intro"),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+        return WAITING_AI_FAKE_PLATFORM
+
+    elif data.startswith("ai_fake_platform_"):
+        platform = data.replace("ai_fake_platform_", "")
+        context.user_data["ai_fake_platform"] = platform
+        platform_name = "Instagram 📸" if platform == "instagram" else "TikTok 🎵"
+        await query.edit_message_text(
+            f"🤖 *{platform_name}*\n\n{t(context, 'ai_fake_send_username')}",
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_AI_FAKE_USERNAME
 
     # نظام الإحالة
     elif data == "referral":
@@ -2630,6 +2690,27 @@ def main():
                 CommandHandler("topusers", topusers_command),
                 CommandHandler("maintenance", maintenance_command),
             ],
+            WAITING_AI_FAKE_PLATFORM: [
+                CallbackQueryHandler(button_handler),
+                CommandHandler("stats", stats_command),
+                CommandHandler("broadcast", broadcast_command),
+                CommandHandler("ban", ban_command),
+                CommandHandler("unban", unban_command),
+                CommandHandler("users", users_command),
+                CommandHandler("topusers", topusers_command),
+                CommandHandler("maintenance", maintenance_command),
+            ],
+            WAITING_AI_FAKE_USERNAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, receive_ai_fake_username),
+                CallbackQueryHandler(button_handler),
+                CommandHandler("stats", stats_command),
+                CommandHandler("broadcast", broadcast_command),
+                CommandHandler("ban", ban_command),
+                CommandHandler("unban", unban_command),
+                CommandHandler("users", users_command),
+                CommandHandler("topusers", topusers_command),
+                CommandHandler("maintenance", maintenance_command),
+            ],
         },
         fallbacks=[
             CommandHandler("start", start),
@@ -2756,6 +2837,44 @@ async def receive_fake_username(update: Update, context: ContextTypes.DEFAULT_TY
         logger.error(f"خطأ في Fake Detector: {e}")
         await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
     return WAITING_FAKE_USERNAME
+
+
+async def receive_ai_fake_username(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    """handler لكاشف الفيك فولوورز بالذكاء الاصطناعي"""
+    username = update.message.text.strip().lstrip('@')
+    platform = context.user_data.get("ai_fake_platform", "instagram")
+
+    if not username or len(username) < 2:
+        await update.message.reply_text(
+            t(context, "ai_fake_send_username"),
+            reply_markup=get_back_keyboard(context),
+        )
+        return WAITING_AI_FAKE_USERNAME
+
+    loading_msg = await update.message.reply_text(
+        t(context, "ai_fake_loading"),
+        parse_mode=ParseMode.MARKDOWN,
+    )
+    try:
+        result = await asyncio.get_event_loop().run_in_executor(
+            None, ai_fake_followers_analysis, username, platform
+        )
+        report = build_ai_fake_followers_report(result, get_user_lang(context))
+        lang = get_user_lang(context)
+        keyboard = [
+            [InlineKeyboardButton(TEXTS[lang]["ai_fake_again"], callback_data="ai_fake_again")],
+            [InlineKeyboardButton(TEXTS[lang]["btn_back"], callback_data="back_main")],
+        ]
+        await loading_msg.delete()
+        await update.message.reply_text(
+            report,
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=InlineKeyboardMarkup(keyboard),
+        )
+    except Exception as e:
+        logger.error(f"خطأ في AI Fake Detector: {e}")
+        await loading_msg.edit_text("❌ حدث خطأ. حاول مرة أخرى.", reply_markup=get_back_keyboard(context))
+    return WAITING_AI_FAKE_USERNAME
 
 
 async def receive_tiktok_views_url(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:

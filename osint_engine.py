@@ -808,3 +808,522 @@ def build_fake_detector_report(data: dict, lang: str = 'ar') -> str:
 ⚠️ _This is an automated analysis, not a final verdict_"""
 
     return report.strip()
+
+
+# ===================== 3. كاشف الفيك فولوورز بالذكاء الاصطناعي =====================
+
+def ai_fake_followers_analysis(username: str, platform: str) -> dict:
+    """
+    كاشف الفيك فولوورز بالذكاء الاصطناعي - تحليل متعمق ودقيق
+    يستخدم نموذج GPT لتحليل أنماط الحساب وإعطاء تقرير احترافي
+    """
+    try:
+        # جلب بيانات الحساب أولاً
+        if platform == 'instagram':
+            raw_data = _fetch_instagram_data_for_ai(username)
+        elif platform == 'tiktok':
+            raw_data = _fetch_tiktok_data_for_ai(username)
+        else:
+            return {'success': False, 'error': 'منصة غير مدعومة'}
+
+        if not raw_data.get('success'):
+            return raw_data
+
+        # تحليل بالذكاء الاصطناعي
+        ai_result = _analyze_with_ai(raw_data, username, platform)
+        return ai_result
+
+    except Exception as e:
+        return {'success': False, 'error': str(e)}
+
+
+def _fetch_instagram_data_for_ai(username: str) -> dict:
+    """جلب بيانات Instagram للتحليل بالذكاء الاصطناعي"""
+    try:
+        r = requests.get(
+            f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}",
+            headers={
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)',
+                'Accept': 'application/json, text/plain, */*',
+                'X-IG-App-ID': '936619743392459',
+            },
+            timeout=15
+        )
+
+        if r.status_code == 200:
+            data = r.json()
+            user = data.get('data', {}).get('user', {})
+        else:
+            r2 = requests.get(
+                f"https://www.instagram.com/{username}/?__a=1&__d=dis",
+                headers={'User-Agent': 'Mozilla/5.0'},
+                timeout=15
+            )
+            if r2.status_code != 200:
+                return {'success': False, 'error': 'تعذّر جلب بيانات الحساب'}
+            data = r2.json()
+            user = data.get('graphql', {}).get('user', {})
+
+        if not user:
+            return {'success': False, 'error': 'الحساب غير موجود أو خاص'}
+
+        followers = user.get('edge_followed_by', {}).get('count', 0)
+        following = user.get('edge_follow', {}).get('count', 0)
+        posts = user.get('edge_owner_to_timeline_media', {}).get('count', 0)
+        bio = user.get('biography', '') or ''
+        full_name = user.get('full_name', '') or ''
+        is_verified = user.get('is_verified', False)
+        is_private = user.get('is_private', False)
+        has_profile_pic = not user.get('is_default_avatar', True)
+        external_url = user.get('external_url', '') or ''
+
+        # تحليل المنشورات
+        media_nodes = user.get('edge_owner_to_timeline_media', {}).get('edges', [])
+        likes_list = []
+        comments_list = []
+        for node in media_nodes[:12]:
+            n = node.get('node', {})
+            likes_list.append(n.get('edge_liked_by', {}).get('count', 0))
+            comments_list.append(n.get('edge_media_to_comment', {}).get('count', 0))
+
+        avg_likes = sum(likes_list) / len(likes_list) if likes_list else 0
+        avg_comments = sum(comments_list) / len(comments_list) if comments_list else 0
+        engagement_rate = ((avg_likes + avg_comments) / followers * 100) if followers > 0 else 0
+
+        # حساب التباين في الإعجابات (مؤشر مهم)
+        if len(likes_list) > 1:
+            import statistics
+            likes_std = statistics.stdev(likes_list) if len(likes_list) > 1 else 0
+            likes_cv = (likes_std / avg_likes * 100) if avg_likes > 0 else 0
+        else:
+            likes_cv = 0
+
+        return {
+            'success': True,
+            'platform': 'instagram',
+            'username': username,
+            'followers': followers,
+            'following': following,
+            'posts': posts,
+            'bio': bio,
+            'full_name': full_name,
+            'is_verified': is_verified,
+            'is_private': is_private,
+            'has_profile_pic': has_profile_pic,
+            'external_url': external_url,
+            'avg_likes': round(avg_likes),
+            'avg_comments': round(avg_comments),
+            'engagement_rate': round(engagement_rate, 3),
+            'likes_cv': round(likes_cv, 1),  # معامل التباين
+            'posts_analyzed': len(likes_list),
+        }
+
+    except Exception as e:
+        return {'success': False, 'error': f'خطأ في جلب البيانات: {str(e)}'}
+
+
+def _fetch_tiktok_data_for_ai(username: str) -> dict:
+    """جلب بيانات TikTok للتحليل بالذكاء الاصطناعي"""
+    try:
+        # tikwm API
+        r = requests.post(
+            "https://tikwm.com/api/user/info",
+            data={"unique_id": username},
+            timeout=15,
+            headers={"User-Agent": "Mozilla/5.0"}
+        )
+        if r.status_code == 200:
+            d = r.json()
+            if d.get('code') == 0:
+                user_data = d.get('data', {}).get('user', {})
+                stats_data = d.get('data', {}).get('stats', {})
+
+                followers = stats_data.get('followerCount', 0)
+                following = stats_data.get('followingCount', 0)
+                likes = stats_data.get('heartCount', 0)
+                videos = stats_data.get('videoCount', 0)
+                verified = user_data.get('verified', False)
+                bio = user_data.get('signature', '') or ''
+                nickname = user_data.get('nickname', '') or ''
+                create_time = user_data.get('createTime', 0)
+
+                likes_per_follower = (likes / followers) if followers > 0 else 0
+                likes_per_video = (likes / videos) if videos > 0 else 0
+                account_age_days = 0
+                if create_time:
+                    from datetime import datetime
+                    age = datetime.now() - datetime.fromtimestamp(create_time)
+                    account_age_days = age.days
+
+                return {
+                    'success': True,
+                    'platform': 'tiktok',
+                    'username': username,
+                    'followers': followers,
+                    'following': following,
+                    'likes': likes,
+                    'videos': videos,
+                    'verified': verified,
+                    'bio': bio,
+                    'nickname': nickname,
+                    'likes_per_follower': round(likes_per_follower, 2),
+                    'likes_per_video': round(likes_per_video),
+                    'account_age_days': account_age_days,
+                }
+
+        return {'success': False, 'error': 'تعذّر جلب بيانات الحساب'}
+
+    except Exception as e:
+        return {'success': False, 'error': f'خطأ في جلب البيانات: {str(e)}'}
+
+
+def _analyze_with_ai(data: dict, username: str, platform: str) -> dict:
+    """
+    التحليل الذكي باستخدام GPT لتقييم نسبة الفيك فولوورز
+    """
+    try:
+        import os
+        from openai import OpenAI
+
+        client = OpenAI()
+
+        # بناء السياق للنموذج
+        if platform == 'instagram':
+            context_text = f"""
+حساب Instagram: @{username}
+- المتابعون: {data['followers']:,}
+- يتابع: {data['following']:,}
+- عدد المنشورات: {data['posts']:,}
+- معدل التفاعل: {data['engagement_rate']}%
+- متوسط الإعجابات: {data['avg_likes']:,}
+- متوسط التعليقات: {data['avg_comments']:,}
+- معامل تباين الإعجابات: {data['likes_cv']}% (يقيس مدى اتساق التفاعل)
+- يوجد بايو: {'نعم' if data['bio'] else 'لا'}
+- يوجد اسم كامل: {'نعم' if data['full_name'] else 'لا'}
+- يوجد صورة ملف شخصي: {'نعم' if data['has_profile_pic'] else 'لا'}
+- موثّق: {'نعم' if data['is_verified'] else 'لا'}
+- حساب خاص: {'نعم' if data['is_private'] else 'لا'}
+- يوجد رابط خارجي: {'نعم' if data['external_url'] else 'لا'}
+- عدد المنشورات المحللة: {data['posts_analyzed']}
+"""
+        else:
+            context_text = f"""
+حساب TikTok: @{username}
+- المتابعون: {data['followers']:,}
+- يتابع: {data['following']:,}
+- إجمالي الإعجابات: {data['likes']:,}
+- عدد الفيديوهات: {data['videos']:,}
+- إعجابات لكل متابع: {data['likes_per_follower']}
+- إعجابات لكل فيديو: {data['likes_per_video']:,}
+- عمر الحساب: {data['account_age_days']} يوم
+- موثّق: {'نعم' if data['verified'] else 'لا'}
+- يوجد بايو: {'نعم' if data['bio'] else 'لا'}
+- الاسم المعروض: {data['nickname'] or 'غير محدد'}
+"""
+
+        prompt = f"""أنت خبير في تحليل حسابات السوشيال ميديا واكتشاف الفيك فولوورز.
+
+بيانات الحساب:
+{context_text}
+
+المطلوب: حلّل هذه البيانات وأعطني:
+1. نسبة الفيك فولوورز المقدّرة (رقم من 0 إلى 100)
+2. نسبة المتابعين الحقيقيين (رقم من 0 إلى 100)
+3. نسبة المتابعين غير النشطين (رقم من 0 إلى 100)
+4. قائمة بأبرز 3-5 مؤشرات مشبوهة (إن وجدت)
+5. قائمة بأبرز 2-3 مؤشرات إيجابية (إن وجدت)
+6. الحكم النهائي: حقيقي / مشبوه / مزيف
+7. توصية قصيرة للمستخدم (جملة واحدة)
+
+أجب بصيغة JSON فقط بدون أي نص إضافي:
+{{
+  "fake_pct": <رقم>,
+  "real_pct": <رقم>,
+  "inactive_pct": <رقم>,
+  "suspicious_signals": ["...", "..."],
+  "positive_signals": ["...", "..."],
+  "verdict": "حقيقي|مشبوه|مزيف",
+  "recommendation": "..."
+}}"""
+
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": "أنت محلل خبير في السوشيال ميديا. تجيب دائماً بـ JSON صحيح فقط."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=600,
+        )
+
+        import json
+        ai_text = response.choices[0].message.content.strip()
+        # تنظيف الرد
+        if ai_text.startswith("```"):
+            ai_text = ai_text.split("```")[1]
+            if ai_text.startswith("json"):
+                ai_text = ai_text[4:]
+        ai_text = ai_text.strip()
+
+        ai_data = json.loads(ai_text)
+
+        # التحقق من صحة البيانات
+        fake_pct = max(0, min(100, int(ai_data.get('fake_pct', 0))))
+        real_pct = max(0, min(100, int(ai_data.get('real_pct', 0))))
+        inactive_pct = max(0, min(100, int(ai_data.get('inactive_pct', 0))))
+
+        # تصحيح المجموع ليكون 100
+        total = fake_pct + real_pct + inactive_pct
+        if total != 100 and total > 0:
+            factor = 100 / total
+            fake_pct = round(fake_pct * factor)
+            real_pct = round(real_pct * factor)
+            inactive_pct = 100 - fake_pct - real_pct
+
+        verdict = ai_data.get('verdict', 'مشبوه')
+        suspicious_signals = ai_data.get('suspicious_signals', [])
+        positive_signals = ai_data.get('positive_signals', [])
+        recommendation = ai_data.get('recommendation', '')
+
+        # تحديد الأيقونة والحكم
+        if fake_pct <= 15:
+            verdict_icon = "🟢"
+            verdict_label_ar = "حساب حقيقي"
+            verdict_label_en = "Likely Real"
+        elif fake_pct <= 30:
+            verdict_icon = "🟡"
+            verdict_label_ar = "نسبة فيك منخفضة"
+            verdict_label_en = "Low Fake Rate"
+        elif fake_pct <= 50:
+            verdict_icon = "🟠"
+            verdict_label_ar = "نسبة فيك متوسطة"
+            verdict_label_en = "Medium Fake Rate"
+        elif fake_pct <= 70:
+            verdict_icon = "🔴"
+            verdict_label_ar = "نسبة فيك مرتفعة"
+            verdict_label_en = "High Fake Rate"
+        else:
+            verdict_icon = "⛔️"
+            verdict_label_ar = "أغلب المتابعين مزيفون"
+            verdict_label_en = "Mostly Fake Followers"
+
+        return {
+            'success': True,
+            'ai_powered': True,
+            'platform': platform,
+            'username': username,
+            'fake_pct': fake_pct,
+            'real_pct': real_pct,
+            'inactive_pct': inactive_pct,
+            'verdict_icon': verdict_icon,
+            'verdict_label_ar': verdict_label_ar,
+            'verdict_label_en': verdict_label_en,
+            'suspicious_signals': suspicious_signals,
+            'positive_signals': positive_signals,
+            'recommendation': recommendation,
+            'raw_data': data,
+        }
+
+    except Exception as e:
+        # fallback: استخدام التحليل التقليدي
+        return _fallback_analysis(data, username, platform, str(e))
+
+
+def _fallback_analysis(data: dict, username: str, platform: str, error: str = '') -> dict:
+    """تحليل احتياطي في حال فشل الذكاء الاصطناعي"""
+    if platform == 'instagram':
+        result = analyze_fake_instagram(username)
+    else:
+        result = analyze_fake_tiktok(username)
+
+    if result.get('success'):
+        score = result.get('fake_score', 0)
+        real_pct = max(0, 100 - score - max(0, score // 3))
+        inactive_pct = max(0, 100 - score - real_pct)
+
+        if score <= 15:
+            verdict_icon = "🟢"
+            verdict_label_ar = "حساب حقيقي"
+            verdict_label_en = "Likely Real"
+        elif score <= 30:
+            verdict_icon = "🟡"
+            verdict_label_ar = "نسبة فيك منخفضة"
+            verdict_label_en = "Low Fake Rate"
+        elif score <= 50:
+            verdict_icon = "🟠"
+            verdict_label_ar = "نسبة فيك متوسطة"
+            verdict_label_en = "Medium Fake Rate"
+        elif score <= 70:
+            verdict_icon = "🔴"
+            verdict_label_ar = "نسبة فيك مرتفعة"
+            verdict_label_en = "High Fake Rate"
+        else:
+            verdict_icon = "⛔️"
+            verdict_label_ar = "أغلب المتابعين مزيفون"
+            verdict_label_en = "Mostly Fake Followers"
+
+        return {
+            'success': True,
+            'ai_powered': False,
+            'platform': platform,
+            'username': username,
+            'fake_pct': score,
+            'real_pct': real_pct,
+            'inactive_pct': inactive_pct,
+            'verdict_icon': verdict_icon,
+            'verdict_label_ar': verdict_label_ar,
+            'verdict_label_en': verdict_label_en,
+            'suspicious_signals': result.get('signals', []),
+            'positive_signals': result.get('positive_signals', []),
+            'recommendation': '',
+            'raw_data': data,
+        }
+    return {'success': False, 'error': error or 'فشل التحليل'}
+
+
+def build_ai_fake_followers_report(data: dict, lang: str = 'ar') -> str:
+    """بناء تقرير كاشف الفيك فولوورز بالذكاء الاصطناعي"""
+    if not data.get('success'):
+        return f"❌ {data.get('error', 'خطأ غير معروف')}"
+
+    platform = data.get('platform', '')
+    username = data.get('username', '')
+    fake_pct = data.get('fake_pct', 0)
+    real_pct = data.get('real_pct', 0)
+    inactive_pct = data.get('inactive_pct', 0)
+    verdict_icon = data.get('verdict_icon', '⚪️')
+    verdict_label = data.get('verdict_label_ar' if lang == 'ar' else 'verdict_label_en', '')
+    suspicious = data.get('suspicious_signals', [])
+    positive = data.get('positive_signals', [])
+    recommendation = data.get('recommendation', '')
+    ai_powered = data.get('ai_powered', False)
+    raw = data.get('raw_data', {})
+
+    platform_icon = "📸" if platform == 'instagram' else "🎵"
+    platform_name = "Instagram" if platform == 'instagram' else "TikTok"
+
+    # شريط المتابعين الحقيقيين (من 10 خانات)
+    real_filled = max(0, min(10, round(real_pct / 10)))
+    fake_filled = max(0, min(10 - real_filled, round(fake_pct / 10)))
+    inactive_filled = 10 - real_filled - fake_filled
+
+    bar_real = "🟩" * real_filled
+    bar_fake = "🟥" * fake_filled
+    bar_inactive = "⬜️" * inactive_filled
+    bar = bar_real + bar_inactive + bar_fake
+
+    # إحصائيات الحساب
+    followers = raw.get('followers', 0)
+    following = raw.get('following', 0)
+
+    if platform == 'instagram':
+        posts = raw.get('posts', 0)
+        engagement = raw.get('engagement_rate', 0)
+        avg_likes = raw.get('avg_likes', 0)
+        stats_lines_ar = (
+            f"👥 المتابعون: `{followers:,}`\n"
+            f"➡️ يتابع: `{following:,}`\n"
+            f"📸 المنشورات: `{posts:,}`\n"
+            f"💬 معدل التفاعل: `{engagement}%`\n"
+            f"❤️ متوسط الإعجابات: `{avg_likes:,}`"
+        )
+        stats_lines_en = (
+            f"👥 Followers: `{followers:,}`\n"
+            f"➡️ Following: `{following:,}`\n"
+            f"📸 Posts: `{posts:,}`\n"
+            f"💬 Engagement Rate: `{engagement}%`\n"
+            f"❤️ Avg Likes: `{avg_likes:,}`"
+        )
+    else:
+        videos = raw.get('videos', 0)
+        likes = raw.get('likes', 0)
+        lpf = raw.get('likes_per_follower', 0)
+        stats_lines_ar = (
+            f"👥 المتابعون: `{followers:,}`\n"
+            f"➡️ يتابع: `{following:,}`\n"
+            f"🎬 الفيديوهات: `{videos:,}`\n"
+            f"❤️ إجمالي الإعجابات: `{likes:,}`\n"
+            f"📊 إعجابات/متابع: `{lpf}`"
+        )
+        stats_lines_en = (
+            f"👥 Followers: `{followers:,}`\n"
+            f"➡️ Following: `{following:,}`\n"
+            f"🎬 Videos: `{videos:,}`\n"
+            f"❤️ Total Likes: `{likes:,}`\n"
+            f"📊 Likes/Follower: `{lpf}`"
+        )
+
+    suspicious_text = '\n'.join([f"• {s}" for s in suspicious]) if suspicious else ('لا توجد مؤشرات مشبوهة' if lang == 'ar' else 'No suspicious signals')
+    positive_text = '\n'.join([f"• {s}" for s in positive]) if positive else ''
+    ai_badge = "🤖 *مدعوم بالذكاء الاصطناعي*" if ai_powered else "📊 *تحليل آلي*"
+
+    if lang == 'ar':
+        rec_line = f"\n💡 *التوصية:* {recommendation}" if recommendation else ""
+        report = f"""🎯 *كاشف الفيك فولوورز*
+{ai_badge}
+━━━━━━━━━━━━━━━━━━━━━━━
+
+{platform_icon} *الحساب:* `@{username}`
+🏷️ *المنصة:* {platform_name}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+📊 *توزيع المتابعين:*
+{bar}
+
+🟩 حقيقيون: `{real_pct}%`
+⬜️ غير نشطين: `{inactive_pct}%`
+🟥 مزيفون: `{fake_pct}%`
+
+{verdict_icon} *الحكم:* {verdict_label}
+{rec_line}
+━━━━━━━━━━━━━━━━━━━━━━━
+📈 *إحصائيات الحساب:*
+{stats_lines_ar}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🚨 *مؤشرات مشبوهة:*
+{suspicious_text}
+"""
+        if positive_text:
+            report += f"""
+━━━━━━━━━━━━━━━━━━━━━━━
+✅ *مؤشرات إيجابية:*
+{positive_text}
+"""
+        report += "\n━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ _هذا تحليل تقديري بالذكاء الاصطناعي_"
+    else:
+        rec_line = f"\n💡 *Recommendation:* {recommendation}" if recommendation else ""
+        report = f"""🎯 *Fake Followers Detector*
+{ai_badge}
+━━━━━━━━━━━━━━━━━━━━━━━
+
+{platform_icon} *Account:* `@{username}`
+🏷️ *Platform:* {platform_name}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+📊 *Follower Breakdown:*
+{bar}
+
+🟩 Real: `{real_pct}%`
+⬜️ Inactive: `{inactive_pct}%`
+🟥 Fake: `{fake_pct}%`
+
+{verdict_icon} *Verdict:* {verdict_label}
+{rec_line}
+━━━━━━━━━━━━━━━━━━━━━━━
+📈 *Account Stats:*
+{stats_lines_en}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+🚨 *Suspicious Signals:*
+{suspicious_text}
+"""
+        if positive_text:
+            report += f"""
+━━━━━━━━━━━━━━━━━━━━━━━
+✅ *Positive Signals:*
+{positive_text}
+"""
+        report += "\n━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ _This is an AI-powered estimated analysis_"
+
+    return report.strip()
